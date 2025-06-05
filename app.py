@@ -7,7 +7,7 @@ st.set_page_config(page_title="AI Lifting Tracker", layout="centered")
 st.title("🏋️ AI Lifting Tracker")
 
 openai.api_key = st.secrets["openai"]["api_key"]
-gc = get_gsheet_connection(st.secrets["gspread"]["creds_path"])
+gc = get_gsheet_connection(st.secrets["gspread"])
 
 sheet_url = st.text_input("📄 Google Sheet URL (shared with service account)", "")
 selected_day = st.selectbox("📆 Choose workout day type", ["Push", "Pull", "Legs"])
