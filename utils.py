@@ -10,12 +10,8 @@ def generate_workout(day_type):
     ]
 
     response = client.chat.completions.create(
-        model="gpt-4",
+        model="gpt-4",  # If this fails, switch to "gpt-3.5-turbo"
         messages=messages
     )
 
     return response.choices[0].message.content
-
-def get_today():
-    import datetime
-    return datetime.date.today().strftime('%A')
