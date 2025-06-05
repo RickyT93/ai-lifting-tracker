@@ -20,7 +20,7 @@ if st.button("Generate Workout"):
 if "workout" in st.session_state:
     st.subheader(f"{selected_day} Workout for {get_today()}")
     for i, ex in enumerate(st.session_state["workout"], 1):
-        st.markdown(f"**{i}. {ex['name']}**")
+        st.markdown(f"**{i}. {ex}**")
         st.caption(f"Muscle: {ex['muscle']} | Equipment: {ex['equipment']}")
         st.text_area("Log your sets/reps/weight:", key=f"log_{i}")
 
