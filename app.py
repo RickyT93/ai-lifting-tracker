@@ -6,7 +6,7 @@ from utils import generate_workout, get_today
 st.set_page_config(page_title="AI Lifting Tracker", layout="centered")
 st.title("🏋️ AI Lifting Tracker")
 
-openai.api_key = st.secrets["openai"]["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"]
+openai.api_key = st.secrets["openai"]["api_key"]
 gc = get_gsheet_connection(st.secrets["gspread"]["creds_path"])
 
 sheet_url = st.text_input("📄 Google Sheet URL (shared with service account)", "")
