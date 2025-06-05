@@ -15,3 +15,7 @@ def generate_workout(day_type):
     )
 
     return response.choices[0].message.content
+
+def get_today():
+    import datetime
+    return datetime.date.today().strftime('%A')
