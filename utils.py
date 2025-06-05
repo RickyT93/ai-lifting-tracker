@@ -1,6 +1,7 @@
 from openai import OpenAI
+import streamlit as st
 
-client = OpenAI()
+client = OpenAI(api_key=st.secrets["openai"]["api_key"])
 
 def generate_workout(day_type):
     messages = [
