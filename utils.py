@@ -1,52 +1,53 @@
+import os
 import re
 import datetime
-import streamlit as st
 import gspread
 from openai import OpenAI
-from google.oauth2.service_account import Credentials
+from dotenv import load_dotenv
 
-# OpenAI API key (pulled from st.secrets)
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+load_dotenv()
 
-# Google Sheets credentials setup from st.secrets
-creds_dict = {key: value for key, value in st.secrets["gspread_creds"].items()}
-creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
+# Initialize OpenAI
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-scopes = [
-    "https://spreadsheets.google.com/feeds",
-    "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/drive.file",
-    "https://www.googleapis.com/auth/drive",
-]
+# Google Sheets client
+gc = gspread.service_account(filename='gspread_creds.json')
 
-credentials = Credentials.from_service_account_info(creds_dict, scopes=scopes)
-gc = gspread.authorize(credentials)
 
-# Helper functions
 def extract_sheet_id(sheet_url):
+    """Extract the Google Sheet ID from the full URL."""
     match = re.search(r"/d/([a-zA-Z0-9-_]+)", sheet_url)
     return match.group(1) if match else None
+
 
 def get_today():
     return datetime.date.today().strftime("%Y-%m-%d")
 
-def generate_workout(day_type, sheet_url):
+
+def generate_workout(day_type, goal, sheet_url):
     sheet_id = extract_sheet_id(sheet_url)
     if not sheet_id:
         raise ValueError("Invalid Google Sheet URL")
 
+    # Open the sheet and fetch PRs
     sheet = gc.open_by_key(sheet_id)
-
-    # Pull PRs from PRs tab
     try:
         prs_worksheet = sheet.worksheet("PRs")
         pr_data = prs_worksheet.get_all_records()
     except Exception:
         pr_data = []
 
+    # Construct prompt for GPT
     messages = [
-        {"role": "system", "content": "You are a personal trainer specializing in hypertrophy and strength programming."},
-        {"role": "user", "content": f"Generate a {day_type} workout with 5 exercises based on these PRs: {pr_data}. Use hypertrophy style (8–12 reps). Give sets, reps, and weight suggestions. Output format: numbered list with exercise name, muscles, equipment, sets, reps, weight."}
+        {
+            "role": "system",
+            "content": "You are a personal trainer who builds smart strength and hypertrophy workouts."
+        },
+        {
+            "role": "user",
+            "content": f"Generate a {goal.lower()} {day_type} workout with sets, reps, and weight based on these PRs: {pr_data}. "
+                       f"Include 5 exercises. For each, list: name, target muscles, equipment, sets, reps, weight."
+        }
     ]
 
     response = client.chat.completions.create(
@@ -56,24 +57,27 @@ def generate_workout(day_type, sheet_url):
 
     text = response.choices[0].message.content
 
-    # Parse GPT response
+    # Parse response
     exercises = []
     for line in text.strip().split("\n"):
-        if line.strip() and line[0].isdigit():
+        if line.strip() and re.match(r"^\d+\.", line):
             parts = line.split(". ", 1)
             if len(parts) == 2:
-                name_block = parts[1]
+                details = parts[1].strip()
+                name = details.split("-")[0].strip()
                 exercises.append({
-                    "name": name_block.split(" - ")[0].strip(),
-                    "muscle": "Unknown",  # Optional to parse
-                    "equipment": "Unknown",
+                    "name": name,
+                    "muscle": "TBD",
+                    "equipment": "TBD",
                     "sets": "3",
                     "reps": "10-12",
-                    "weight": "Based on PR"
+                    "weight": "Based on PRs"
                 })
+
     return exercises
 
-def log_workout(sheet_url, workout_type, exercises):
+
+def log_workout(sheet_url, exercises):
     sheet_id = extract_sheet_id(sheet_url)
     if not sheet_id:
         raise ValueError("Invalid Google Sheet URL")
@@ -85,14 +89,13 @@ def log_workout(sheet_url, workout_type, exercises):
         log_worksheet = sheet.add_worksheet(title="WorkoutLog", rows="1000", cols="7")
         log_worksheet.append_row(["Date", "Workout Type", "Exercise", "Sets", "Reps", "Weight", "Notes"])
 
-    today = get_today()
     for ex in exercises:
         log_worksheet.append_row([
-            today,
-            workout_type,
-            ex.get("name", ""),
-            ex.get("sets", ""),
-            ex.get("reps", ""),
-            ex.get("weight", ""),
-            ex.get("notes", "")
+            ex.get("Date", ""),
+            ex.get("Workout Type", ""),
+            ex.get("Exercise", ""),
+            ex.get("Sets", ""),
+            ex.get("Reps", ""),
+            ex.get("Weight", ""),
+            ex.get("Notes", "")
         ])
