@@ -1,8 +1,10 @@
 from datetime import datetime
 from openai import OpenAI
 import gspread
+import streamlit as st
+from openai import OpenAI
 
-client = OpenAI()
+client = OpenAI(api_key=st.secrets["openai"]["api_key"])
 
 def get_today():
     return datetime.today().strftime("%Y-%m-%d")
