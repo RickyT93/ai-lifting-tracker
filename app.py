@@ -1,68 +1,55 @@
+import random
+import gspread
+from google.oauth2.service_account import Credentials
 import streamlit as st
-from datetime import date
-from utils import generate_workout, log_workout
+import json
 
-st.set_page_config(page_title="🏋️ AI Lifting Tracker", layout="centered")
-st.title("🏋️ AI Lifting Tracker")
+# Load credentials from .streamlit/secrets.toml
+scope = ["https://www.googleapis.com/auth/spreadsheets"]
+gspread_creds = st.secrets["gspread_creds"]
+credentials = Credentials.from_service_account_info(gspread_creds, scopes=scope)
+client = gspread.authorize(credentials)
 
-# Step 1: User Inputs
-sheet_url = st.text_input("📄 Paste your Google Sheet URL (shared with service account)", key="sheet_url")
-selected_day = st.selectbox("📆 Choose workout day type", ["Push", "Pull", "Legs"])
-goal = st.radio("🎯 Select your goal", ["Hypertrophy", "Strength", "Endurance"], index=0)
-custom_date = st.date_input("📅 Select the workout date", value=date.today())
+# Sample exercise bank
+exercise_bank = {
+    "Push": [
+        {"name": "Incline Dumbbell Press", "muscle": "Chest", "equipment": "Dumbbell"},
+        {"name": "Flat Barbell Bench Press", "muscle": "Chest", "equipment": "Barbell"},
+        {"name": "Overhead Press", "muscle": "Shoulders", "equipment": "Barbell"},
+        {"name": "Dumbbell Lateral Raise", "muscle": "Shoulders", "equipment": "Dumbbell"},
+        {"name": "Cable Triceps Pushdown", "muscle": "Triceps", "equipment": "Cable"}
+    ],
+    "Pull": [
+        {"name": "Barbell Row", "muscle": "Back", "equipment": "Barbell"},
+        {"name": "Lat Pulldown", "muscle": "Back", "equipment": "Cable"},
+        {"name": "Face Pulls", "muscle": "Rear Delts", "equipment": "Cable"},
+        {"name": "Dumbbell Curls", "muscle": "Biceps", "equipment": "Dumbbell"},
+        {"name": "Preacher Curl", "muscle": "Biceps", "equipment": "Barbell"}
+    ],
+    "Legs": [
+        {"name": "Back Squat", "muscle": "Quads", "equipment": "Barbell"},
+        {"name": "Romanian Deadlift", "muscle": "Hamstrings", "equipment": "Barbell"},
+        {"name": "Leg Press", "muscle": "Quads", "equipment": "Machine"},
+        {"name": "Walking Lunges", "muscle": "Glutes", "equipment": "Dumbbell"},
+        {"name": "Calf Raise", "muscle": "Calves", "equipment": "Machine"}
+    ]
+}
 
-# Step 2: Session State Setup
-if "workout_generated" not in st.session_state:
-    st.session_state.workout_generated = False
+# Sets/Reps/Weights Generator
+def generate_workout(day_type, goal):
+    base = exercise_bank.get(day_type, [])
+    selected = random.sample(base, 3)
+    for ex in selected:
+        if goal == "Hypertrophy":
+            ex.update({"sets": 4, "reps": "8–12", "weight": "Moderate"})
+        elif goal == "Strength":
+            ex.update({"sets": 5, "reps": "4–6", "weight": "Heavy"})
+        else:
+            ex.update({"sets": 3, "reps": "12–20", "weight": "Light"})
+    return selected
 
-if "workout_data" not in st.session_state:
-    st.session_state.workout_data = []
-
-# Step 3: Generate Workout
-if st.button("Generate Workout") and sheet_url:
-    try:
-        workout = generate_workout(selected_day, goal)
-        st.session_state.workout_data = []
-        for ex in workout:
-            st.session_state.workout_data.append({
-                "Date": custom_date.strftime("%Y-%m-%d"),
-                "Workout Type": selected_day,
-                "Exercise": ex['name'],
-                "Sets": ex['sets'],
-                "Reps": ex['reps'],
-                "Weight": ex['weight'],
-                "Muscle": ex['muscle'],
-                "Equipment": ex['equipment'],
-                "Notes": ""
-            })
-        st.session_state.workout_generated = True
-    except Exception as e:
-        st.error(f"❌ Error generating workout: {e}")
-
-# Step 4: Display Workout & Collect Notes
-if st.session_state.workout_generated and st.session_state.workout_data:
-    st.subheader(f"{selected_day} Workout for {custom_date.strftime('%Y-%m-%d')}")
-    for i, ex in enumerate(st.session_state.workout_data):
-        st.markdown(f"**{i + 1}. {ex['Exercise']}**")
-        st.caption(f"Muscle: {ex['Muscle']} | Equipment: {ex['Equipment']}")
-        st.text(f"Sets: {ex['Sets']} | Reps: {ex['Reps']} | Weight: {ex['Weight']}")
-        notes_key = f"notes_{i}"
-        if notes_key not in st.session_state:
-            st.session_state[notes_key] = ""
-        st.session_state[notes_key] = st.text_input(f"Notes for {ex['Exercise']}", value=st.session_state[notes_key], key=notes_key)
-        st.session_state.workout_data[i]["Notes"] = st.session_state[notes_key]
-
-    # Step 5: Log Workout
-    if st.button("Log Workout"):
-        try:
-            log_workout(sheet_url, st.session_state.workout_data)
-            st.success("✅ Workout logged successfully!")
-
-            # Clean up state
-            note_count = len(st.session_state.workout_data)
-            for i in range(note_count):
-                del st.session_state[f"notes_{i}"]
-            st.session_state.workout_generated = False
-            st.session_state.workout_data = []
-        except Exception as e:
-            st.error(f"❌ Failed to log workout: {e}")
+# Logger
+def log_workout(sheet_url, workout_data):
+    sheet = client.open_by_url(sheet_url).sheet1
+    for row in workout_data:
+        sheet.append_row(list(row.values()))
