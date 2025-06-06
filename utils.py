@@ -1,23 +1,31 @@
-# utils.py
-
+import os
+from datetime import date
 from openai import OpenAI
-import datetime
 import streamlit as st
 
+# Initialize OpenAI client with API key from secrets
 client = OpenAI(api_key=st.secrets["openai"]["api_key"])
 
 def get_today():
-    return datetime.datetime.today().strftime('%Y-%m-%d')
+    return date.today().strftime("%Y-%m-%d")
 
 def generate_workout(day_type):
-    messages = [
-        {"role": "system", "content": "You are a strength and hypertrophy training coach."},
-        {"role": "user", "content": f"Generate a unique {day_type} day workout focused on both muscle growth and strength. Include coaching cues and specific muscles targeted."}
-    ]
+    prompt = f"Create a {day_type.lower()} day gym workout with 5 exercises. " \
+             f"For each exercise, return JSON with 'name', 'muscle', and 'equipment'."
 
     response = client.chat.completions.create(
-        model="gpt-3.5-turbo",  # You can change to gpt-4 if your key supports it
-        messages=messages
+        model="gpt-4o",
+        messages=[
+            {"role": "system", "content": "You are a fitness coach who formats responses as JSON arrays."},
+            {"role": "user", "content": prompt}
+        ]
     )
 
-    return response.choices[0].message.content
+    # Extract and safely parse workout response
+    try:
+        raw = response.choices[0].message.content.strip()
+        workout = eval(raw) if raw.startswith("[") else []  # Basic fallback parser
+        return workout
+    except Exception as e:
+        st.error(f"❌ Failed to parse workout: {e}")
+        return []
