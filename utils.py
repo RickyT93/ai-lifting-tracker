@@ -1,49 +1,66 @@
-from datetime import date
+from datetime import datetime
 from openai import OpenAI
-import streamlit as st
-import gspread_helper
+import gspread
 
-client = OpenAI(api_key=st.secrets["openai"]["api_key"])
+client = OpenAI()
 
 def get_today():
-    return date.today().strftime("%Y-%m-%d")
+    return datetime.today().strftime("%Y-%m-%d")
 
 def get_user_profile(sheet_url):
-    gc = gspread_helper.get_gsheet_connection()
+    gc = gspread.service_account()
     sh = gc.open_by_url(sheet_url)
-    worksheet = sh.worksheet("User_Profile")
+    worksheet = sh.worksheet("UserProfile")
     data = worksheet.get_all_records()
-    return data[0] if data else None
+    profile = {row["Exercise"]: row for row in data}
+    return profile
 
-def generate_workout(day_type, profile):
+def calculate_weight(pr, percent):
+    return round(pr * percent)
+
+def generate_workout(day_type, sheet_url):
     messages = [
-        {"role": "system", "content": f"You are a certified strength coach designing gym workouts."},
-        {"role": "user", "content": f"Design a {day_type} workout for someone with 1RM: Squat {profile['1RM_Squat']} lbs, Bench {profile['1RM_Bench']} lbs, Deadlift {profile['1RM_Deadlift']} lbs. Their goal is {profile['Goal']}. Include 5 exercises with sets, reps, and weight suggestions. Format it as JSON list of objects with: name, muscle, equipment, sets, reps, weight."}
+        {"role": "system", "content": "You are a personal trainer creating gym workouts."},
+        {"role": "user", "content": f"Create a {day_type} workout with 5 exercises including muscles and equipment. Return only JSON in this format:\n[{'{'}'name':'','muscle':'','equipment':''{'}'}]"}
     ]
-
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=messages
     )
+    exercises = eval(response.choices[0].message.content)
 
-    content = response.choices[0].message.content
-    try:
-        return eval(content)  # Ensure this returns a list of dicts
-    except Exception:
-        st.error("Failed to parse GPT response.")
-        return []
+    # Fetch PRs
+    profile = get_user_profile(sheet_url)
 
-def log_workout(sheet_url, today, day_type, workout, notes):
-    gc = gspread_helper.get_gsheet_connection()
+    for ex in exercises:
+        pr_entry = profile.get(ex["name"], None)
+        if pr_entry:
+            pr = pr_entry.get("1RM", 100)
+        else:
+            pr = 100  # fallback
+        ex["sets"] = 4
+        ex["reps"] = 12
+        ex["weight"] = calculate_weight(pr, 0.7)  # 70% of 1RM
+    return exercises
+
+def log_workout(sheet_url, day_type, date_str, workout_data, notes):
+    gc = gspread.service_account()
     sh = gc.open_by_url(sheet_url)
-    worksheet = sh.worksheet("Workout_Log")
-    for ex in workout:
-        worksheet.append_row([
-            today,
+    try:
+        sheet = sh.worksheet("WorkoutLog")
+    except gspread.exceptions.WorksheetNotFound:
+        sheet = sh.add_worksheet(title="WorkoutLog", rows="1000", cols="20")
+        sheet.append_row(["Date", "Day Type", "Exercise", "Muscle", "Equipment", "Sets", "Reps", "Weight", "Notes"])
+
+    for ex in workout_data:
+        sheet.append_row([
+            date_str,
             day_type,
             ex["name"],
-            ex.get("sets", ""),
-            ex.get("reps", ""),
-            ex.get("weight", ""),
-            notes.get(ex["name"], "")
+            ex["muscle"],
+            ex["equipment"],
+            ex["sets"],
+            ex["reps"],
+            ex["weight"],
+            notes
         ])
