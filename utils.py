@@ -1,47 +1,49 @@
-import os
-import json
 from datetime import date
 from openai import OpenAI
 import streamlit as st
+import gspread_helper
 
 client = OpenAI(api_key=st.secrets["openai"]["api_key"])
 
 def get_today():
     return date.today().strftime("%Y-%m-%d")
 
-def generate_workout(day_type):
-    prompt = (
-        f"Generate a structured JSON list with 5 unique {day_type.lower()} exercises. "
-        f"Each object should include: name, muscle, equipment."
+def get_user_profile(sheet_url):
+    gc = gspread_helper.get_gsheet_connection()
+    sh = gc.open_by_url(sheet_url)
+    worksheet = sh.worksheet("User_Profile")
+    data = worksheet.get_all_records()
+    return data[0] if data else None
+
+def generate_workout(day_type, profile):
+    messages = [
+        {"role": "system", "content": f"You are a certified strength coach designing gym workouts."},
+        {"role": "user", "content": f"Design a {day_type} workout for someone with 1RM: Squat {profile['1RM_Squat']} lbs, Bench {profile['1RM_Bench']} lbs, Deadlift {profile['1RM_Deadlift']} lbs. Their goal is {profile['Goal']}. Include 5 exercises with sets, reps, and weight suggestions. Format it as JSON list of objects with: name, muscle, equipment, sets, reps, weight."}
+    ]
+
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=messages
     )
 
+    content = response.choices[0].message.content
     try:
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": "Respond only in JSON format. No extra text."},
-                {"role": "user", "content": prompt}
-            ]
-        )
-
-        raw = response.choices[0].message.content.strip()
-
-        # Try parsing JSON first
-        try:
-            workout = json.loads(raw)
-        except json.JSONDecodeError:
-            # Fallback: Try to extract JSON manually if ChatGPT adds extra text
-            json_start = raw.find('[')
-            json_end = raw.rfind(']')
-            workout = json.loads(raw[json_start:json_end + 1])
-
-        # Ensure each item has the required keys
-        cleaned = []
-        for ex in workout:
-            if all(k in ex for k in ("name", "muscle", "equipment")):
-                cleaned.append(ex)
-        return cleaned
-
-    except Exception as e:
-        st.error(f"❌ Failed to generate workout: {e}")
+        return eval(content)  # Ensure this returns a list of dicts
+    except Exception:
+        st.error("Failed to parse GPT response.")
         return []
+
+def log_workout(sheet_url, today, day_type, workout, notes):
+    gc = gspread_helper.get_gsheet_connection()
+    sh = gc.open_by_url(sheet_url)
+    worksheet = sh.worksheet("Workout_Log")
+    for ex in workout:
+        worksheet.append_row([
+            today,
+            day_type,
+            ex["name"],
+            ex.get("sets", ""),
+            ex.get("reps", ""),
+            ex.get("weight", ""),
+            notes.get(ex["name"], "")
+        ])
