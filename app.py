@@ -3,36 +3,42 @@ from utils import generate_workout, get_today, log_workout
 from datetime import date
 
 st.set_page_config(page_title="🏋️ AI Lifting Tracker", layout="centered")
-
 st.title("🏋️ AI Lifting Tracker")
 
-sheet_url = st.text_input("Paste your Google Sheet URL here")
+# Input: Google Sheet URL
+sheet_url = st.text_input("📄 Paste your Google Sheet URL (shared with service account)", key="sheet_url")
 
+# Input: Workout Type and Goal
 selected_day = st.selectbox("📆 Choose workout day type", ["Push", "Pull", "Legs"])
+goal = st.radio("🎯 Select your goal", ["Hypertrophy", "Strength", "Endurance"], index=0)
 
-if "workout_data" not in st.session_state:
-    st.session_state.workout_data = []
-
+# Workout generation
 if st.button("Generate Workout") and sheet_url:
+    today = get_today()
     try:
-        today = get_today()
-        st.session_state.workout_data = generate_workout(selected_day, sheet_url)
-        st.session_state.today = today
+        workout = generate_workout(selected_day, goal, sheet_url)
 
         st.subheader(f"{selected_day} Workout for {today}")
-        for i, ex in enumerate(st.session_state.workout_data, start=1):
+        workout_data = []
+        for i, ex in enumerate(workout, start=1):
             st.markdown(f"**{i}. {ex['name']}**")
             st.caption(f"Muscle: {ex['muscle']} | Equipment: {ex['equipment']}")
-            st.write(f"Sets: {ex['sets']} | Reps: {ex['reps']} | Weight: {ex['weight']} lbs")
+            st.text(f"Sets: {ex['sets']} | Reps: {ex['reps']} | Weight: {ex['weight']} lbs")
+            notes = st.text_input(f"Notes for {ex['name']}", key=f"note_{i}")
+
+            workout_data.append({
+                "Date": today,
+                "Workout Type": selected_day,
+                "Exercise": ex['name'],
+                "Sets": ex['sets'],
+                "Reps": ex['reps'],
+                "Weight": ex['weight'],
+                "Notes": notes
+            })
+
+        if st.button("Log Workout"):
+            log_workout(sheet_url, workout_data)
+            st.success("✅ Workout logged successfully!")
+
     except Exception as e:
         st.error(f"❌ Error: {e}")
-
-if st.session_state.get("workout_data"):
-    notes = st.text_area("📝 Optional Notes for This Workout")
-
-    if st.button("Log Workout"):
-        try:
-            log_workout(sheet_url, selected_day, st.session_state.today, st.session_state.workout_data, notes)
-            st.success("✅ Workout logged successfully!")
-        except Exception as e:
-            st.error(f"❌ Failed to log workout: {e}")
