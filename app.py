@@ -18,7 +18,7 @@ if "workout_generated" not in st.session_state:
 if "workout_data" not in st.session_state:
     st.session_state.workout_data = []
 
-# Step 3: Generate Workout Button
+# Step 3: Generate Workout
 if st.button("Generate Workout") and sheet_url:
     try:
         workout = generate_workout(selected_day, goal)
@@ -39,7 +39,7 @@ if st.button("Generate Workout") and sheet_url:
     except Exception as e:
         st.error(f"❌ Error generating workout: {e}")
 
-# Step 4: Show Workout + Notes Input
+# Step 4: Display Workout & Collect Notes
 if st.session_state.workout_generated and st.session_state.workout_data:
     st.subheader(f"{selected_day} Workout for {custom_date.strftime('%Y-%m-%d')}")
     for i, ex in enumerate(st.session_state.workout_data):
@@ -52,15 +52,17 @@ if st.session_state.workout_generated and st.session_state.workout_data:
         st.session_state[notes_key] = st.text_input(f"Notes for {ex['Exercise']}", value=st.session_state[notes_key], key=notes_key)
         st.session_state.workout_data[i]["Notes"] = st.session_state[notes_key]
 
-    # Step 5: Log Button
+    # Step 5: Log Workout
     if st.button("Log Workout"):
         try:
             log_workout(sheet_url, st.session_state.workout_data)
             st.success("✅ Workout logged successfully!")
-            # Clear everything
+
+            # Clean up state
+            note_count = len(st.session_state.workout_data)
+            for i in range(note_count):
+                del st.session_state[f"notes_{i}"]
             st.session_state.workout_generated = False
             st.session_state.workout_data = []
-            for i in range(len(st.session_state.workout_data)):
-                del st.session_state[f"notes_{i}"]
         except Exception as e:
             st.error(f"❌ Failed to log workout: {e}")
