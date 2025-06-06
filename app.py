@@ -1,41 +1,50 @@
-# app.py
 import streamlit as st
-from utils import generate_workout, get_today, log_workout_to_sheet
-from gspread_helper import get_gsheet_connection
+from datetime import date
+from utils import generate_workout, get_today, get_user_profile, log_workout
 
 st.set_page_config(page_title="🏋️ AI Lifting Tracker", layout="centered")
 st.title("🏋️ AI Lifting Tracker")
 
-sheet_url = st.text_input("Paste your Google Sheet URL here", key="sheet_url")
-st.session_state["sheet_url"] = sheet_url  # Save to session for reuse
+# Step 1: Input Google Sheet URL
+sheet_url = st.text_input("📄 Paste your Google Sheet URL (shared with service account)", key="sheet_url")
 
-goal = st.selectbox("📊 Select your goal", ["Hypertrophy", "Strength", "Endurance"])
-selected_day = st.selectbox("🗖️ Choose workout day type", ["Push", "Pull", "Legs"])
-
-if st.button("Generate Workout"):
+if sheet_url:
+    # Step 2: Load user profile from Google Sheet
     try:
-        today = get_today()
-        workout = generate_workout(selected_day, goal, sheet_url)
-
-        st.subheader(f"{selected_day} Workout for {today}")
-        for i, ex in enumerate(workout, start=1):
-            st.markdown(f"**{i}. {ex['name']}**")
-            st.caption(f"Muscle: {ex['muscle']} | Equipment: {ex['equipment']}")
-            st.write(f"Sets: {ex['sets']} | Reps: {ex['reps']} | Suggested Weight: {ex['weight']} lbs")
-
-        st.success("Workout generated!")
-        st.session_state["current_workout"] = workout
+        profile = get_user_profile(sheet_url)
+        st.success(f"Loaded profile for: {profile['User']} | Goal: {profile['Goal']}")
     except Exception as e:
-        st.error(f"❌ Error: {e}")
+        st.error(f"❌ Could not load user profile: {e}")
+        st.stop()
 
-if "current_workout" in st.session_state:
-    st.subheader("📃 Log Your Workout")
-    notes = st.text_area("Any notes or feedback from today's workout?")
+    # Step 3: Select day type
+    selected_day = st.selectbox("📆 Choose workout day type", ["Push", "Pull", "Legs"])
 
-    if st.button("Log Workout"):
-        try:
-            log_workout_to_sheet(sheet_url, st.session_state["current_workout"], selected_day, notes)
-            st.success("Workout logged successfully!")
-            del st.session_state["current_workout"]
-        except Exception as e:
-            st.error(f"❌ Failed to log workout: {e}")
+    # Step 4: Generate Workout
+    if st.button("🎯 Generate Workout"):
+        today = get_today()
+        workout = generate_workout(selected_day, profile)
+
+        if workout:
+            st.subheader(f"{selected_day} Workout for {today}")
+            notes = {}
+            for i, ex in enumerate(workout, start=1):
+                name = ex.get("name", f"Exercise {i}")
+                muscle = ex.get("muscle", "Unknown")
+                equipment = ex.get("equipment", "Bodyweight")
+                sets = ex.get("sets", "?")
+                reps = ex.get("reps", "?")
+                weight = ex.get("weight", "?")
+
+                st.markdown(f"**{i}. {name}**")
+                st.caption(f"Muscle: {muscle} | Equipment: {equipment}")
+                st.text(f"Sets: {sets} | Reps: {reps} | Suggested Weight: {weight} lbs")
+                notes[name] = st.text_input(f"📝 Notes for {name}", key=f"notes_{i}")
+
+            # Step 5: Log Workout
+            if st.button("💾 Log Workout"):
+                try:
+                    log_workout(sheet_url, today, selected_day, workout, notes)
+                    st.success("✅ Workout logged successfully!")
+                except Exception as e:
+                    st.error(f"❌ Failed to log workout: {e}")
