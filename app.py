@@ -5,21 +5,18 @@ from datetime import date
 st.set_page_config(page_title="🏋️ AI Lifting Tracker", layout="centered")
 st.title("🏋️ AI Lifting Tracker")
 
-# Input: Google Sheet URL
+# Inputs
 sheet_url = st.text_input("📄 Paste your Google Sheet URL (shared with service account)", key="sheet_url")
-
-# Input: Workout Type, Goal, and Date
 selected_day = st.selectbox("📆 Choose workout day type", ["Push", "Pull", "Legs"])
 goal = st.radio("🎯 Select your goal", ["Hypertrophy", "Strength", "Endurance"], index=0)
-selected_date = st.date_input("📅 Select workout date", value=date.today())
+custom_date = st.date_input("📅 Select the workout date", value=date.today())
 
-# Workout generation
+# Generate Workout
 if st.button("Generate Workout") and sheet_url:
-    workout_date = selected_date.strftime("%Y-%m-%d")
     try:
         workout = generate_workout(selected_day, goal, sheet_url)
 
-        st.subheader(f"{selected_day} Workout for {workout_date}")
+        st.subheader(f"{selected_day} Workout for {custom_date.strftime('%Y-%m-%d')}")
         workout_data = []
         for i, ex in enumerate(workout, start=1):
             st.markdown(f"**{i}. {ex['name']}**")
@@ -28,7 +25,7 @@ if st.button("Generate Workout") and sheet_url:
             notes = st.text_input(f"Notes for {ex['name']}", key=f"note_{i}")
 
             workout_data.append({
-                "Date": workout_date,
+                "Date": custom_date.strftime("%Y-%m-%d"),
                 "Workout Type": selected_day,
                 "Exercise": ex['name'],
                 "Sets": ex['sets'],
