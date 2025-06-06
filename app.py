@@ -6,7 +6,7 @@ st.set_page_config(page_title="🏋️ AI Lifting Tracker", layout="centered")
 
 st.title("🏋️ AI Lifting Tracker")
 
-sheet_url = st.text_input("📄 Paste your Google Sheet URL (shared with service account)", key="sheet_url")
+sheet_url = st.text_input("Paste your Google Sheet URL here")
 
 selected_day = st.selectbox("📆 Choose workout day type", ["Push", "Pull", "Legs"])
 
