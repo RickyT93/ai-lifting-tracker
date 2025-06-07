@@ -1,40 +1,54 @@
+import openai
 import gspread
 from google.oauth2.service_account import Credentials
 import streamlit as st
-import random
 
-# Exercise bank – TEMP (replace with dynamic API later)
-EXERCISES = {
-    "Push": [...],  # same as before or expanded
-    "Pull": [...],
-    "Legs": [...]
-}
+# Set up Google Sheets credentials
+scope = ["https://www.googleapis.com/auth/spreadsheets"]
+gspread_creds = st.secrets["gspread_creds"]
+credentials = Credentials.from_service_account_info(gspread_creds, scopes=scope)
+gc = gspread.authorize(credentials)
 
-GOAL_MAP = {
-    "Hypertrophy": {"sets": 4, "reps": "8–12"},
-    "Strength": {"sets": 5, "reps": "4–6"},
-    "Endurance": {"sets": 3, "reps": "12–20"},
-}
+# Configure OpenAI
+openai.api_key = st.secrets["OPENAI_API_KEY"]
 
+# GPT-powered dynamic exercise generator
 def generate_workout(day_type, goal):
-    return [
-        {
-            "name": ex["name"],
-            "muscle": ex["muscle"],
-            "equipment": ex["equipment"],
-            "sets": GOAL_MAP[goal]["sets"],
-            "reps": GOAL_MAP[goal]["reps"],
-            "weight": "Auto"
-        }
-        for ex in random.sample(EXERCISES[day_type], 3)
-    ]
+    prompt = (
+        f"Create a detailed {goal.lower()} workout for a '{day_type}' day. "
+        "Provide 5 exercises with the following fields in JSON format:\n"
+        "[\n"
+        "  {\n"
+        "    'name': 'Exercise Name',\n"
+        "    'muscle': 'Targeted Muscle',\n"
+        "    'equipment': 'Required Equipment',\n"
+        "    'sets': Number of sets,\n"
+        "    'reps': 'Reps range',\n"
+        "    'weight': 'Auto' (as placeholder)\n"
+        "  },\n"
+        "  ...\n"
+        "]"
+    )
+    response = openai.ChatCompletion.create(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.6
+    )
+    
+    # Clean and parse GPT response
+    text = response["choices"][0]["message"]["content"]
+    try:
+        # Try parsing JSON safely using eval in a safe context
+        workout = eval(text, {"__builtins__": None}, {})
+        return workout if isinstance(workout, list) else []
+    except Exception as e:
+        st.error(f"Error parsing GPT response: {e}")
+        return []
 
-def log_workout(sheet_url, data):
-    scope = ["https://www.googleapis.com/auth/spreadsheets"]
-    credentials = Credentials.from_service_account_info(st.secrets["gspread_creds"], scopes=scope)
-    gc = gspread.authorize(credentials)
+# Append workout logs to Google Sheets
+def log_workout(sheet_url, workout_data):
     sheet = gc.open_by_url(sheet_url).sheet1
-    for row in data:
+    for row in workout_data:
         sheet.append_row([
             row["Date"],
             row["Workout Type"],
