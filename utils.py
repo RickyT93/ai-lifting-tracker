@@ -1,19 +1,3 @@
-from openai import OpenAI
-import gspread
-from google.oauth2.service_account import Credentials
-import streamlit as st
-import json 
-
-# Google Sheets setup
-scope = ["https://www.googleapis.com/auth/spreadsheets"]
-gspread_creds = st.secrets["gspread_creds"]
-credentials = Credentials.from_service_account_info(gspread_creds, scopes=scope)
-gc = gspread.authorize(credentials)
-
-# OpenAI setup
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
-
-# 🧠 GPT-powered exercise generator
 def generate_workout(day_type, goal):
     prompt = (
         f"Create a {goal.lower()} workout for a '{day_type}' day. "
@@ -36,11 +20,13 @@ def generate_workout(day_type, goal):
         )
         text = response.choices[0].message.content.strip()
 
-        # Optional: show raw output for debugging
         st.text_area("🧠 GPT Raw Output", text, height=200)
 
-        # Clean common issues like backticks
-        text = text.strip("` \n")
+        # Remove code block markers if present
+        if text.startswith("```json") and text.endswith("```"):
+            text = text[len("```json"): -3].strip()
+        elif text.startswith("```") and text.endswith("```"):
+            text = text[3:-3].strip()
 
         workout = json.loads(text)
         return workout if isinstance(workout, list) else []
@@ -51,18 +37,3 @@ def generate_workout(day_type, goal):
     except Exception as e:
         st.error(f"⚠️ Unexpected error: {e}")
         return []
-
-
-# ✅ Google Sheets logger
-def log_workout(sheet_url, workout_data):
-    sheet = gc.open_by_url(sheet_url).sheet1
-    for row in workout_data:
-        sheet.append_row([
-            row["Date"],
-            row["Workout Type"],
-            row["Exercise"],
-            row["Sets"],
-            row["Reps"],
-            row["Weight"],
-            row["Notes"]
-        ])
