@@ -10,7 +10,6 @@ selected_day = st.selectbox("📆 Choose workout day type", ["Push", "Pull", "Le
 goal = st.radio("🎯 Select your goal", ["Hypertrophy", "Strength", "Endurance"], index=0)
 custom_date = st.date_input("📅 Select the workout date", value=date.today())
 
-# Generate Button
 if st.button("Generate Workout") and sheet_url:
     with st.spinner("Generating workout..."):
         workout = generate_workout(selected_day, goal)
@@ -28,7 +27,6 @@ if st.button("Generate Workout") and sheet_url:
                 "Notes": ""
             })
 
-# Display Workout
 if "workout_data" in st.session_state:
     st.subheader(f"{selected_day} Workout for {custom_date.strftime('%Y-%m-%d')}")
     for i, ex in enumerate(st.session_state["workout_data"]):
@@ -39,6 +37,9 @@ if "workout_data" in st.session_state:
         st.session_state["workout_data"][i]["Notes"] = st.text_input(f"Notes for {ex['Exercise']}", key=note_key)
 
     if st.button("Log Workout"):
-        log_workout(sheet_url, st.session_state["workout_data"])
-        st.success("✅ Workout logged!")
-        del st.session_state["workout_data"]
+        try:
+            log_workout(sheet_url, st.session_state["workout_data"])
+            st.success("✅ Workout logged!")
+            del st.session_state["workout_data"]
+        except Exception as e:
+            st.error(f"⚠️ Logging failed: {e}")
