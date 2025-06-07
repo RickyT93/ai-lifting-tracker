@@ -2,6 +2,7 @@ from openai import OpenAI
 import gspread
 from google.oauth2.service_account import Credentials
 import streamlit as st
+import json 
 
 # Google Sheets setup
 scope = ["https://www.googleapis.com/auth/spreadsheets"]
@@ -15,18 +16,16 @@ client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 # 🧠 GPT-powered exercise generator
 def generate_workout(day_type, goal):
     prompt = (
-        f"Create a detailed {goal.lower()} workout for a '{day_type}' day. "
-        "Provide 5 exercises in JSON format with the fields:\n"
-        "[\n"
-        "  {\n"
-        "    'name': 'Exercise Name',\n"
-        "    'muscle': 'Targeted Muscle',\n"
-        "    'equipment': 'Required Equipment',\n"
-        "    'sets': Number of sets,\n"
-        "    'reps': 'Reps range',\n"
-        "    'weight': 'Auto'\n"
-        "  }\n"
-        "]"
+        f"Create a {goal.lower()} workout for a '{day_type}' day. "
+        "Return a JSON array of 5 exercises, each with:\n"
+        "- name (string)\n"
+        "- muscle (string)\n"
+        "- equipment (string)\n"
+        "- sets (integer)\n"
+        "- reps (string)\n"
+        "- weight (string, always 'Auto')\n\n"
+        "Use proper JSON format. Example:\n"
+        '[{"name": "Squat", "muscle": "Quads", "equipment": "Barbell", "sets": 4, "reps": "8-10", "weight": "Auto"}, ...]'
     )
 
     try:
@@ -35,11 +34,16 @@ def generate_workout(day_type, goal):
             messages=[{"role": "user", "content": prompt}],
             temperature=0.6
         )
-        text = response.choices[0].message.content
-        workout = eval(text, {"__builtins__": None}, {})
+        text = response.choices[0].message.content.strip()
+
+        # Try to parse GPT response using json.loads
+        workout = json.loads(text)
         return workout if isinstance(workout, list) else []
+    except json.JSONDecodeError as je:
+        st.error(f"⚠️ GPT returned invalid JSON: {je}")
+        return []
     except Exception as e:
-        st.error(f"⚠️ GPT response error: {e}")
+        st.error(f"⚠️ Unexpected error: {e}")
         return []
 
 # ✅ Google Sheets logger
