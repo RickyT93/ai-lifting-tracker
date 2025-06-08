@@ -55,9 +55,12 @@ def generate_workout(day_type, goal):
 
 def log_workout(sheet_url, workout_data):
     try:
-        sheet = gc.open_by_url(sheet_url).sheet1
+        # Clean up URL to remove /edit and parameters
+        clean_url = sheet_url.split("/edit")[0]
+        sheet = gc.open_by_url(clean_url).sheet1
+
         for row in workout_data:
-            st.write("Appending row:", row)  # Debug line
+            st.write("Appending row:", row)
             sheet.append_row([
                 row["Date"],
                 row["Workout Type"],
@@ -69,10 +72,9 @@ def log_workout(sheet_url, workout_data):
             ])
     except gspread.exceptions.APIError as e:
         st.error("⚠️ Google Sheets API Error")
-        st.exception(e)  # Show full API error
+        st.exception(e)
         st.stop()
     except Exception as e:
         st.error("⚠️ Unexpected error occurred while logging workout.")
-        st.exception(e)  # Show complete traceback
+        st.exception(e)
         st.stop()
-
