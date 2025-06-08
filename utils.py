@@ -57,6 +57,7 @@ def log_workout(sheet_url, workout_data):
     try:
         sheet = gc.open_by_url(sheet_url).sheet1
         for row in workout_data:
+            st.write("Appending row:", row)  # Debug line
             sheet.append_row([
                 row["Date"],
                 row["Workout Type"],
@@ -66,9 +67,12 @@ def log_workout(sheet_url, workout_data):
                 row["Weight"],
                 row["Notes"]
             ])
-    except gspread.exceptions.APIError:
-        st.error("⚠️ Could not access the sheet. Make sure it's shared with the service account.")
+    except gspread.exceptions.APIError as e:
+        st.error("⚠️ Google Sheets API Error")
+        st.exception(e)  # Show full API error
         st.stop()
     except Exception as e:
-        st.error(f"⚠️ Unexpected error: {e}")
+        st.error("⚠️ Unexpected error occurred while logging workout.")
+        st.exception(e)  # Show complete traceback
         st.stop()
+
