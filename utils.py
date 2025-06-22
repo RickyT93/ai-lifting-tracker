@@ -4,19 +4,20 @@ from google.oauth2.service_account import Credentials
 import streamlit as st
 import json
 
-# 🔑 Google Sheets
+# 🔑 Google Sheets Auth
 scope = ["https://www.googleapis.com/auth/spreadsheets"]
 gspread_creds = st.secrets["gspread_creds"]
 credentials = Credentials.from_service_account_info(gspread_creds, scopes=scope)
 gc = gspread.authorize(credentials)
 
-# 🧠 OpenAI
+# 🧠 OpenAI Auth
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
+# 🔥 Generate workout
 def generate_workout(day_type, goal):
     prompt = (
         f"Create a {goal.lower()} workout for a '{day_type}' day. "
-        "Return ONLY a JSON array of 5 exercises. Each with:\n"
+        "Return ONLY a JSON array of 5 exercises. Each must have:\n"
         "- name (string)\n"
         "- muscle (string)\n"
         "- equipment (string)\n"
@@ -50,17 +51,25 @@ def generate_workout(day_type, goal):
         st.error(f"⚠️ Unexpected error: {e}")
         return []
 
+# ✅ Log workout
 def log_workout(sheet_url, workout_data):
-    clean_url = sheet_url.split("/edit")[0]
-    sheet = gc.open_by_url(clean_url).worksheet("WorkoutLog")
+    try:
+        clean_url = sheet_url.split("/edit")[0]
+        sheet = gc.open_by_url(clean_url).worksheet("WorkoutLog")
 
-    for row in workout_data:
-        sheet.append_row([
-            row["Date"],
-            row["Workout Type"],
-            row["Exercise"],
-            row["Sets"],
-            row["Reps"],
-            row["Weight"],
-            row["Notes"]
-        ])
+        for row in workout_data:
+            sheet.append_row([
+                row["Date"],
+                row["Workout Type"],  # ✅ Matches your Sheet header
+                row["Exercise"],
+                row["Sets"],
+                row["Reps"],
+                row["Weight"],
+                row["Notes"]
+            ])
+    except gspread.exceptions.APIError:
+        st.error("⚠️ Could not access Google Sheet. Check sharing permissions and Sheet name 'WorkoutLog'.")
+        st.stop()
+    except Exception as e:
+        st.error(f"⚠️ Unexpected error while logging: {e}")
+        st.stop()
