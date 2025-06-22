@@ -5,11 +5,13 @@ from utils import generate_workout, log_workout
 st.set_page_config(page_title="🏋️ AI Lifting Tracker", layout="centered")
 st.title("🏋️ AI Lifting Tracker")
 
+# 🗂️ Inputs
 sheet_url = st.text_input("📄 Paste your Google Sheet URL (shared with service account)", key="sheet_url")
 selected_day = st.selectbox("📆 Choose workout day type", ["Push", "Pull", "Legs"])
 goal = st.radio("🎯 Select your goal", ["Hypertrophy", "Strength", "Endurance"], index=0)
 custom_date = st.date_input("📅 Select the workout date", value=date.today())
 
+# ⚙️ Generate Button
 if st.button("Generate Workout") and sheet_url:
     with st.spinner("Generating workout..."):
         workout = generate_workout(selected_day, goal)
@@ -27,6 +29,7 @@ if st.button("Generate Workout") and sheet_url:
                 "Notes": ""
             })
 
+# ✅ Display + Log
 if "workout_data" in st.session_state:
     st.subheader(f"{selected_day} Workout for {custom_date.strftime('%Y-%m-%d')}")
     for i, ex in enumerate(st.session_state["workout_data"]):
@@ -39,7 +42,7 @@ if "workout_data" in st.session_state:
     if st.button("Log Workout"):
         try:
             log_workout(sheet_url, st.session_state["workout_data"])
-            st.success("✅ Workout logged!")
+            st.success("✅ Workout logged to Google Sheets!")
             del st.session_state["workout_data"]
         except Exception as e:
             st.error(f"⚠️ Logging failed: {e}")
