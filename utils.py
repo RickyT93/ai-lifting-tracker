@@ -4,19 +4,19 @@ from google.oauth2.service_account import Credentials
 import streamlit as st
 import json
 
-# Google Sheets setup
+# 🔑 Google Sheets
 scope = ["https://www.googleapis.com/auth/spreadsheets"]
 gspread_creds = st.secrets["gspread_creds"]
 credentials = Credentials.from_service_account_info(gspread_creds, scopes=scope)
 gc = gspread.authorize(credentials)
 
-# OpenAI setup
+# 🧠 OpenAI
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 def generate_workout(day_type, goal):
     prompt = (
         f"Create a {goal.lower()} workout for a '{day_type}' day. "
-        "Return ONLY a JSON array of 5 exercises. No explanation. Each exercise must include:\n"
+        "Return ONLY a JSON array of 5 exercises. Each with:\n"
         "- name (string)\n"
         "- muscle (string)\n"
         "- equipment (string)\n"
@@ -34,7 +34,6 @@ def generate_workout(day_type, goal):
             temperature=0.5
         )
         text = response.choices[0].message.content.strip()
-
         st.text_area("🧠 GPT Raw Output", text, height=200)
 
         if text.startswith("```json") and text.endswith("```"):
@@ -44,37 +43,24 @@ def generate_workout(day_type, goal):
 
         workout = json.loads(text)
         return workout if isinstance(workout, list) else []
-
     except json.JSONDecodeError as je:
         st.error(f"⚠️ GPT returned invalid JSON: {je}")
-        st.warning("Try regenerating. GPT may have included extra explanation or bad formatting.")
         return []
     except Exception as e:
         st.error(f"⚠️ Unexpected error: {e}")
         return []
 
 def log_workout(sheet_url, workout_data):
-    try:
-        # Clean up URL to remove /edit and parameters
-        clean_url = sheet_url.split("/edit")[0]
-        sheet = gc.open_by_url(clean_url).sheet1
+    clean_url = sheet_url.split("/edit")[0]
+    sheet = gc.open_by_url(clean_url).worksheet("WorkoutLog")
 
-        for row in workout_data:
-            st.write("Appending row:", row)
-            sheet.append_row([
-                row["Date"],
-                row["Workout Type"],
-                row["Exercise"],
-                row["Sets"],
-                row["Reps"],
-                row["Weight"],
-                row["Notes"]
-            ])
-    except gspread.exceptions.APIError as e:
-        st.error("⚠️ Google Sheets API Error")
-        st.exception(e)
-        st.stop()
-    except Exception as e:
-        st.error("⚠️ Unexpected error occurred while logging workout.")
-        st.exception(e)
-        st.stop()
+    for row in workout_data:
+        sheet.append_row([
+            row["Date"],
+            row["Workout Type"],
+            row["Exercise"],
+            row["Sets"],
+            row["Reps"],
+            row["Weight"],
+            row["Notes"]
+        ])
