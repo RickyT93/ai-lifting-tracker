@@ -13,11 +13,8 @@ gc = gspread.authorize(creds)
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 def generate_workout(day_type: str, goal: str) -> list:
-    """
-    Calls OpenAI to generate a JSON workout.
-    """
     prompt = (
-        f"Create a {goal.lower()} workout for a '{day_type}' day.\n"
+        f"Create a {goal.lower()} workout for a '{day_type}' day. "
         "Return ONLY a JSON array of 5 exercises, no explanation.\n"
         "Each must include: name, muscle, equipment, sets (int), reps (string), weight (string 'Auto')."
     )
@@ -44,14 +41,12 @@ def generate_workout(day_type: str, goal: str) -> list:
         return []
 
 def log_workout(sheet_url: str, workout_data: list):
-    """
-    Logs workout to Google Sheets tab 'WorkoutLog'
-    """
     try:
-        # Sanitize Google Sheets URL:
-        clean_url = sheet_url.split("/edit")[0]
-        key = clean_url.split("/d/")[1]
+        # Extract the sheet key
+        key = sheet_url.split("/d/")[1].split("/")[0].strip()
+        st.info(f"Sheet key used: {key}")
 
+        # Open by key — robust & works
         sheet = gc.open_by_key(key).worksheet("WorkoutLog")
 
         for row in workout_data:
@@ -65,10 +60,15 @@ def log_workout(sheet_url: str, workout_data: list):
                 row["Notes"]
             ])
     except gspread.exceptions.APIError as e:
-        st.error("⚠️ Google Sheets API error — check permissions and tab name!")
+        st.error("⚠️ Google Sheets API Error — check sharing + tab name!")
+        st.exception(e)
+        st.stop()
+    except PermissionError as e:
+        st.error("⚠️ Google says the service account is not an editor for this sheet key.")
+        st.info("Check your share settings carefully and re-share if needed.")
         st.exception(e)
         st.stop()
     except Exception as e:
-        st.error("⚠️ Unexpected error during log.")
+        st.error("⚠️ Unexpected error.")
         st.exception(e)
         st.stop()
