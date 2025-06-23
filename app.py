@@ -2,29 +2,22 @@ import streamlit as st
 from datetime import date
 from utils import generate_workout, log_workout
 
-# ✅ Page config
 st.set_page_config(page_title="🏋️ AI Lifting Tracker", layout="centered")
 st.title("🏋️ AI Lifting Tracker")
 
-# 🗂️ User inputs
-sheet_url = st.text_input(
-    "📄 Paste your Google Sheet URL (must be shared with the service account as Editor)",
-    key="sheet_url"
-)
-
+sheet_url = st.text_input("📄 Paste your Google Sheet URL (must be shared with the service account as Editor)", key="sheet_url")
 selected_day = st.selectbox("📆 Choose workout day type", ["Push", "Pull", "Legs"])
 goal = st.radio("🎯 Select your goal", ["Hypertrophy", "Strength", "Endurance"], index=0)
 custom_date = st.date_input("📅 Select the workout date", value=date.today())
 
-# ⚙️ Generate workout
 if st.button("Generate Workout") and sheet_url:
-    with st.spinner("🔮 Generating your personalized workout..."):
-        workout = generate_workout(selected_day, goal)
+    with st.spinner("Generating workout with smart progression..."):
+        workout = generate_workout(sheet_url, selected_day, goal)
         st.session_state["workout_data"] = []
         for ex in workout:
             st.session_state["workout_data"].append({
                 "Date": custom_date.strftime("%Y-%m-%d"),
-                "Workout Type": selected_day,  # 🗂️ Matches your sheet column
+                "Workout Type": selected_day,
                 "Exercise": ex["name"],
                 "Sets": ex["sets"],
                 "Reps": ex["reps"],
@@ -34,7 +27,6 @@ if st.button("Generate Workout") and sheet_url:
                 "Notes": ""
             })
 
-# ✅ Show and log
 if "workout_data" in st.session_state:
     st.subheader(f"{selected_day} Workout for {custom_date.strftime('%Y-%m-%d')}")
     for i, ex in enumerate(st.session_state["workout_data"]):
@@ -42,16 +34,12 @@ if "workout_data" in st.session_state:
         st.caption(f"Muscle: {ex['Muscle']} | Equipment: {ex['Equipment']}")
         st.text(f"Sets: {ex['Sets']} | Reps: {ex['Reps']} | Weight: {ex['Weight']}")
         note_key = f"note_{i}"
-        st.session_state["workout_data"][i]["Notes"] = st.text_input(
-            f"Notes for {ex['Exercise']}",
-            key=note_key
-        )
+        st.session_state["workout_data"][i]["Notes"] = st.text_input(f"Notes for {ex['Exercise']}", key=note_key)
 
     if st.button("Log Workout"):
         try:
             log_workout(sheet_url, st.session_state["workout_data"])
-            st.success("✅ Workout successfully logged to Google Sheets!")
-            # 🔄 Reset state
+            st.success("✅ Workout logged to Google Sheets!")
             del st.session_state["workout_data"]
         except Exception as e:
-            st.error(f"⚠️ Failed to log workout: {e}")
+            st.error(f"⚠️ Logging failed: {e}")
