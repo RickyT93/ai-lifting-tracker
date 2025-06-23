@@ -2,26 +2,25 @@ import streamlit as st
 from datetime import date
 from utils import generate_workout, log_workout
 
-st.set_page_config(page_title="🏋️‍♂️ AI Lifting Tracker", layout="centered")
-st.title("🏋️‍♂️ AI Lifting Tracker")
+st.set_page_config(page_title="🏋️ AI Lifting Tracker", layout="centered")
+st.title("🏋️ AI Lifting Tracker")
 
-# --- Inputs ---
+# === Inputs ===
 sheet_url = st.text_input(
-    "📄 Paste your Google Sheet URL (shared with the service account as Editor)",
-    key="sheet_url"
+    "📄 Paste your Google Sheet URL (must be shared with the service account as Editor)"
 )
-selected_day = st.selectbox("📆 Choose workout day type", ["Push", "Pull", "Legs"])
-goal = st.radio("🎯 Select your goal", ["Hypertrophy", "Strength", "Endurance"], index=0)
-custom_date = st.date_input("📅 Select the workout date", value=date.today())
+selected_day = st.selectbox("📆 Workout Type", ["Push", "Pull", "Legs"])
+goal = st.radio("🎯 Goal", ["Hypertrophy", "Strength", "Endurance"], index=0)
+custom_date = st.date_input("📅 Workout Date", value=date.today())
 
-# --- Generate Workout ---
+# === Generate Workout ===
 if st.button("Generate Workout") and sheet_url:
     with st.spinner("Generating workout..."):
         workout = generate_workout(selected_day, goal)
         if workout:
             st.session_state["workout_data"] = [
                 {
-                    "Date": custom_date.isoformat(),
+                    "Date": custom_date.strftime("%Y-%m-%d"),
                     "Workout Type": selected_day,
                     "Exercise": ex["name"],
                     "Sets": ex["sets"],
@@ -34,11 +33,11 @@ if st.button("Generate Workout") and sheet_url:
                 for ex in workout
             ]
         else:
-            st.error("❌ Failed to generate a valid workout. Try again.")
+            st.error("❌ GPT did not return valid data. Try again!")
 
-# --- Display & Log Workout ---
+# === Show & Log ===
 if "workout_data" in st.session_state:
-    st.subheader(f"{selected_day} Workout for {custom_date.isoformat()}")
+    st.subheader(f"{selected_day} Workout for {custom_date.strftime('%Y-%m-%d')}")
     for idx, ex in enumerate(st.session_state["workout_data"]):
         st.markdown(f"**{idx + 1}. {ex['Exercise']}**")
         st.caption(f"{ex['Muscle']} | {ex['Equipment']}")
