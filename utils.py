@@ -4,24 +4,30 @@ from google.oauth2.service_account import Credentials
 import streamlit as st
 import json
 
-# 🔑 Google Sheets credentials
+# --- Setup Google Sheets client ---
 scope = ["https://www.googleapis.com/auth/spreadsheets"]
 gspread_creds = st.secrets["gspread_creds"]
 credentials = Credentials.from_service_account_info(gspread_creds, scopes=scope)
 gc = gspread.authorize(credentials)
 
-# 🧠 OpenAI client
+# --- Setup OpenAI ---
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-# ✅ Helper: extract Sheet ID safely from ANY pasted URL
+# --- Helper: extract sheet key ---
 def extract_sheet_key(sheet_url):
-    return sheet_url.split("/d/")[1].split("/")[0]
+    """
+    Extracts the unique sheet key from a full Google Sheets URL.
+    """
+    if "/d/" in sheet_url:
+        return sheet_url.split("/d/")[1].split("/")[0]
+    else:
+        raise ValueError("Invalid Google Sheets URL. Must contain '/d/'.")
 
-# ✅ Generate workout using GPT-4o
+# --- Generate Workout with GPT ---
 def generate_workout(day_type, goal):
     prompt = (
         f"Create a {goal.lower()} workout for a '{day_type}' day. "
-        "Return ONLY a JSON array of 5 exercises. Each exercise must include:\n"
+        "Return ONLY a JSON array of 5 exercises. Each must include:\n"
         "- name (string)\n"
         "- muscle (string)\n"
         "- equipment (string)\n"
@@ -36,12 +42,12 @@ def generate_workout(day_type, goal):
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.5
+            temperature=0.4
         )
         text = response.choices[0].message.content.strip()
         st.text_area("🧠 GPT Raw Output", text, height=200)
 
-        # Remove code block syntax if any
+        # Clean code block formatting if needed
         if text.startswith("```json") and text.endswith("```"):
             text = text[len("```json"):-3].strip()
         elif text.startswith("```") and text.endswith("```"):
@@ -49,6 +55,7 @@ def generate_workout(day_type, goal):
 
         workout = json.loads(text)
         return workout if isinstance(workout, list) else []
+
     except json.JSONDecodeError as je:
         st.error(f"⚠️ GPT returned invalid JSON: {je}")
         return []
@@ -56,7 +63,7 @@ def generate_workout(day_type, goal):
         st.error(f"⚠️ Unexpected error: {e}")
         return []
 
-# ✅ Log workout to Google Sheets
+# --- Log Workout to Google Sheets ---
 def log_workout(sheet_url, workout_data):
     try:
         key = extract_sheet_key(sheet_url)
@@ -72,8 +79,11 @@ def log_workout(sheet_url, workout_data):
                 row["Weight"],
                 row["Notes"]
             ])
+
+        st.success("✅ Workout logged to Google Sheets!")
+
     except gspread.exceptions.APIError as e:
-        st.error("⚠️ Google Sheets API Error — check permissions and Sheet ID.")
+        st.error("🚫 Google Sheets API error — check share permission or tab name.")
         st.exception(e)
     except Exception as e:
         st.error("⚠️ Unexpected error while logging workout.")
