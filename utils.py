@@ -1,90 +1,71 @@
-from openai import OpenAI
+import json
 import gspread
 from google.oauth2.service_account import Credentials
+from openai import OpenAI
 import streamlit as st
-import json
 
-# --- Setup Google Sheets client ---
+# --- Google Sheets setup ---
 scope = ["https://www.googleapis.com/auth/spreadsheets"]
-gspread_creds = st.secrets["gspread_creds"]
-credentials = Credentials.from_service_account_info(gspread_creds, scopes=scope)
-gc = gspread.authorize(credentials)
+creds_info = st.secrets["gspread_creds"]
+creds = Credentials.from_service_account_info(creds_info, scopes=scope)
+gc = gspread.authorize(creds)
 
-# --- Setup OpenAI ---
+# --- OpenAI setup ---
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-# --- Helper: extract sheet key ---
-def extract_sheet_key(sheet_url):
+def generate_workout(day_type: str, goal: str) -> list:
     """
-    Extracts the unique sheet key from a full Google Sheets URL.
+    Generate a JSON-formatted workout using OpenAI:
+    5 exercises, each with 
+    name, muscle, equipment, sets, reps, weight ("Auto").
     """
-    if "/d/" in sheet_url:
-        return sheet_url.split("/d/")[1].split("/")[0]
-    else:
-        raise ValueError("Invalid Google Sheets URL. Must contain '/d/'.")
-
-# --- Generate Workout with GPT ---
-def generate_workout(day_type, goal):
     prompt = (
-        f"Create a {goal.lower()} workout for a '{day_type}' day. "
-        "Return ONLY a JSON array of 5 exercises. Each must include:\n"
-        "- name (string)\n"
-        "- muscle (string)\n"
-        "- equipment (string)\n"
-        "- sets (integer)\n"
-        "- reps (string)\n"
-        "- weight (string, always 'Auto')\n\n"
-        "Example:\n"
-        '[{\"name\": \"Squat\", \"muscle\": \"Quads\", \"equipment\": \"Barbell\", \"sets\": 4, \"reps\": \"8-10\", \"weight\": \"Auto\"}]'
+        f"Create a {goal.lower()} workout for a '{day_type}' day.\n"
+        "Return ONLY a JSON array of 5 exercises. No extra explanation.\n"
+        "Each exercise must include:\n"
+        "name (string), muscle (string), equipment (string),\n"
+        "sets (integer), reps (string), weight (string, always 'Auto')\n\n"
+        "Example output:\n"
+        '[{\"name\":\"Squat\",\"muscle\":\"Quads\",\"equipment\":\"Barbell\",'
+        '"sets\":4,\"reps\":\"8-10\",\"weight\":\"Auto\"}, ...]'
     )
 
     try:
-        response = client.chat.completions.create(
+        resp = client.chat.completions.create(
             model="gpt-4o",
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.4
+            temperature=0.5
         )
-        text = response.choices[0].message.content.strip()
+        text = resp.choices[0].message.content.strip()
         st.text_area("🧠 GPT Raw Output", text, height=200)
 
-        # Clean code block formatting if needed
-        if text.startswith("```json") and text.endswith("```"):
-            text = text[len("```json"):-3].strip()
-        elif text.startswith("```") and text.endswith("```"):
-            text = text[3:-3].strip()
+        # Strip markdown backticks if present
+        if text.startswith("```"):
+            text = "\n".join(text.split("\n")[1:-1])
 
-        workout = json.loads(text)
-        return workout if isinstance(workout, list) else []
+        return json.loads(text)
 
     except json.JSONDecodeError as je:
         st.error(f"⚠️ GPT returned invalid JSON: {je}")
         return []
     except Exception as e:
-        st.error(f"⚠️ Unexpected error: {e}")
+        st.error(f"⚠️ Unexpected error during generation: {e}")
         return []
 
-# --- Log Workout to Google Sheets ---
-def log_workout(sheet_url, workout_data):
-    try:
-        key = extract_sheet_key(sheet_url)
-        sheet = gc.open_by_key(key).worksheet("WorkoutLog")
+def log_workout(sheet_url: str, workout_data: list):
+    """
+    Append each workout row to the "WorkoutLog" sheet.
+    """
+    clean_url = sheet_url.split("/edit")[0]
+    sheet = gc.open_by_url(clean_url).worksheet("WorkoutLog")
 
-        for row in workout_data:
-            sheet.append_row([
-                row["Date"],
-                row["Workout Type"],
-                row["Exercise"],
-                row["Sets"],
-                row["Reps"],
-                row["Weight"],
-                row["Notes"]
-            ])
-
-        st.success("✅ Workout logged to Google Sheets!")
-
-    except gspread.exceptions.APIError as e:
-        st.error("🚫 Google Sheets API error — check share permission or tab name.")
-        st.exception(e)
-    except Exception as e:
-        st.error("⚠️ Unexpected error while logging workout.")
-        st.exception(e)
+    for row in workout_data:
+        sheet.append_row([
+            row["Date"],
+            row["Workout Type"],
+            row["Exercise"],
+            row["Sets"],
+            row["Reps"],
+            row["Weight"],
+            row["Notes"]
+        ])
