@@ -4,67 +4,32 @@ from google.oauth2.service_account import Credentials
 import streamlit as st
 import json
 
-# 🔑 Google Sheets setup
+# 🔑 Google Sheets credentials
 scope = ["https://www.googleapis.com/auth/spreadsheets"]
 gspread_creds = st.secrets["gspread_creds"]
 credentials = Credentials.from_service_account_info(gspread_creds, scopes=scope)
 gc = gspread.authorize(credentials)
 
-# 🧠 OpenAI setup
+# 🧠 OpenAI client
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-# 📊 ---- New: Get last log for an exercise ----
-def get_last_log(sheet_url, exercise_name):
-    clean_url = sheet_url.split("/edit")[0]
-    sheet = gc.open_by_url(clean_url).worksheet("WorkoutLog")
-    records = sheet.get_all_records()
+# ✅ Helper: extract Sheet ID safely from ANY pasted URL
+def extract_sheet_key(sheet_url):
+    return sheet_url.split("/d/")[1].split("/")[0]
 
-    for row in reversed(records):
-        if row.get("Exercise") == exercise_name:
-            return row  # last log for this exercise
-    return None  # no previous log
-
-# 📈 ---- New: Smart progression ----
-def calculate_next_weight(last_weight, last_note):
-    try:
-        last_weight = float(last_weight)
-    except:
-        return "Auto"
-
-    note = str(last_note).lower()
-    if "easy" in note:
-        next_weight = last_weight * 1.025
-    elif "heavy" in note:
-        next_weight = last_weight  # retry
-    else:
-        next_weight = last_weight
-
-    # Cap jump at +5%
-    next_weight = min(next_weight, last_weight * 1.05)
-    return round(next_weight, 1)
-
-# 🏋️ ---- GPT workout generator ----
-def generate_workout(sheet_url, day_type, goal):
-    # 📌 Optional: use previous log for progression context
-    examples = []
-    for ex_name in ["Bench Press", "Overhead Press", "Squat"]:  # top frequent
-        last = get_last_log(sheet_url, ex_name)
-        if last:
-            next_weight = calculate_next_weight(last["Weight"], last["Notes"])
-            examples.append(f"{ex_name} next weight suggestion: {next_weight} lbs based on last note '{last['Notes']}'")
-
+# ✅ Generate workout using GPT-4o
+def generate_workout(day_type, goal):
     prompt = (
         f"Create a {goal.lower()} workout for a '{day_type}' day. "
-        "Return ONLY a JSON array of 5 exercises. No explanation. "
-        f"Here are prior examples: {examples}. "
-        "Each must include:\n"
+        "Return ONLY a JSON array of 5 exercises. Each exercise must include:\n"
         "- name (string)\n"
         "- muscle (string)\n"
         "- equipment (string)\n"
-        "- sets (int)\n"
+        "- sets (integer)\n"
         "- reps (string)\n"
-        "- weight (string, suggest progression if you know else use 'Auto')\n"
-        "JSON only!"
+        "- weight (string, always 'Auto')\n\n"
+        "Example:\n"
+        '[{\"name\": \"Squat\", \"muscle\": \"Quads\", \"equipment\": \"Barbell\", \"sets\": 4, \"reps\": \"8-10\", \"weight\": \"Auto\"}]'
     )
 
     try:
@@ -76,7 +41,7 @@ def generate_workout(sheet_url, day_type, goal):
         text = response.choices[0].message.content.strip()
         st.text_area("🧠 GPT Raw Output", text, height=200)
 
-        # Clean up possible code fences
+        # Remove code block syntax if any
         if text.startswith("```json") and text.endswith("```"):
             text = text[len("```json"):-3].strip()
         elif text.startswith("```") and text.endswith("```"):
@@ -84,7 +49,6 @@ def generate_workout(sheet_url, day_type, goal):
 
         workout = json.loads(text)
         return workout if isinstance(workout, list) else []
-
     except json.JSONDecodeError as je:
         st.error(f"⚠️ GPT returned invalid JSON: {je}")
         return []
@@ -92,19 +56,25 @@ def generate_workout(sheet_url, day_type, goal):
         st.error(f"⚠️ Unexpected error: {e}")
         return []
 
-# ✅ ---- Log workout ----
+# ✅ Log workout to Google Sheets
 def log_workout(sheet_url, workout_data):
-    clean_url = sheet_url.split("/edit")[0]
-    sheet = gc.open_by_url(clean_url).worksheet("WorkoutLog")
+    try:
+        key = extract_sheet_key(sheet_url)
+        sheet = gc.open_by_key(key).worksheet("WorkoutLog")
 
-    for row in workout_data:
-        st.write("Appending row:", row)  # debug
-        sheet.append_row([
-            row["Date"],
-            row["Workout Type"],  # must match "Workout Type"
-            row["Exercise"],
-            row["Sets"],
-            row["Reps"],
-            row["Weight"],
-            row["Notes"]
-        ])
+        for row in workout_data:
+            sheet.append_row([
+                row["Date"],
+                row["Workout Type"],
+                row["Exercise"],
+                row["Sets"],
+                row["Reps"],
+                row["Weight"],
+                row["Notes"]
+            ])
+    except gspread.exceptions.APIError as e:
+        st.error("⚠️ Google Sheets API Error — check permissions and Sheet ID.")
+        st.exception(e)
+    except Exception as e:
+        st.error("⚠️ Unexpected error while logging workout.")
+        st.exception(e)
