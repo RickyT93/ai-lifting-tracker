@@ -17,59 +17,77 @@ st.set_page_config(
 # === FLAME STYLE (scaled down) ===
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=UnifrakturCook:wght@700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=UnifrakturCook:wght@700&family=IM+Fell+English+SC&display=swap');
 
+/* === Global Font === */
 body, h1, h2, h3, h4, h5, h6, p, label, div, span {
-  font-family: 'UnifrakturCook', cursive;
-  color: #FFEEEE !important;
-  font-size: 1.2em !important;  /* baseline */
+  font-family: 'IM Fell English SC', serif;
+  color: #e0f7ff !important;
+  font-size: 1.2em;  /* Base body size */
 }
 
+/* === Title Style === */
 .ragnarok-title {
-  font-size: 7.5vw;  /* 🔥 Reduced ~25% from 10vw */
+  font-family: 'UnifrakturCook', cursive;
+  font-size: 9vw;  /* Adjusted to ~25% smaller than before */
   text-align: center;
-  color: #FF3300;
+  color: #e0f7ff;
   text-shadow:
-    0 0 10px #FF2200,
-    0 0 20px #FF0000,
-    0 0 40px #FF0000,
-    0 0 80px #FF0000;
-  animation: flame 3s infinite alternate;
+    0 0 5px #ff0000,
+    0 0 10px #ff3300,
+    0 0 20px #ff6600,
+    0 0 40px #ff9900;
+  animation: flameglow 3s infinite alternate;
 }
 
-@keyframes flame {
-  0% { text-shadow:
-    0 0 10px #FF2200,
-    0 0 20px #FF0000,
-    0 0 40px #FF0000,
-    0 0 80px #FF0000; }
-  100% { text-shadow:
-    0 0 20px #FF4400,
-    0 0 40px #FF1100,
-    0 0 80px #FF0000,
-    0 0 100px #FF0000; }
+@keyframes flameglow {
+  from {
+    text-shadow:
+      0 0 5px #ff0000,
+      0 0 10px #ff3300,
+      0 0 20px #ff6600,
+      0 0 40px #ff9900;
+  }
+  to {
+    text-shadow:
+      0 0 10px #ff3300,
+      0 0 20px #ff6600,
+      0 0 40px #ff9900,
+      0 0 60px #ffcc00;
+  }
+}
+
+/* === Sidebar === */
+[data-testid="stSidebar"] {
+  background-color: #111;
 }
 
 [data-testid="stSidebar"] * {
-  font-size: 1.45em !important;  /* 🔥 Increase sidebar text by ~45% */
+  font-size: 1.2em !important;  /* Clean, balanced size */
+  color: #e0f7ff !important;
 }
 
+[data-testid="stSidebar"] h1,
+[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3 {
+  font-size: 1.3em !important;  /* Slightly bigger headings */
+  font-weight: bold;
+}
+
+/* === Buttons === */
 .stButton>button {
   background: #000;
-  color: #FF3300;
-  border: 2px solid #FF3300;
+  color: #ff3300;
+  border: 2px solid #ff3300;
   border-radius: 8px;
   font-weight: bold;
   padding: 12px 24px;
   font-size: 1.2em;
 }
 
+/* === Inputs === */
 input, select, textarea, input[type="date"] {
-  color: white !important;
-}
-
-[data-testid="stSidebar"] {
-  background-color: #111;
+    color: white !important;
 }
 </style>
 """, unsafe_allow_html=True)
