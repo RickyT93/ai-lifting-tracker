@@ -17,9 +17,8 @@ client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 def generate_workout(sheet_key, day_type, goal):
     """
-    Generate a personalized elite-level workout using PRs + logs.
+    Generate an elite-level workout using PRs + logs.
     """
-
     # === Get PRs ===
     pr_sheet = gc.open_by_key(sheet_key).worksheet("PR_Baseline")
     pr_records = pr_sheet.get_all_records()
@@ -31,7 +30,7 @@ def generate_workout(sheet_key, day_type, goal):
     last_logs = [row for row in logs if row["Workout Type"] == day_type]
     last_logs = sorted(last_logs, key=lambda x: x["Date"], reverse=True)[:3]
 
-    # === Elite Prompt ===
+    # === Ultimate Prompt ===
     prompt = f"""
 You are an elite-level strength & functional fitness coach — the caliber of Arnold Schwarzenegger's secret coach and Hafthor Björnsson's strongman advisor — tasked with designing an exceptional, highly personalized workout plan for today.
 
@@ -48,11 +47,11 @@ Constraints & context:
 {json.dumps(last_logs)}
 
 Rules:
-1️⃣ The workout must be elite-level, functional, and strongman-capable.
-2️⃣ Use advanced programming principles: RPE, % of PRs, periodization, supersets, cluster sets, auto-regulation.
-3️⃣ Include a warm-up recommendation tailored to today’s main lifts.
-4️⃣ Include a finisher recommendation to push beyond failure or add functional conditioning.
-5️⃣ Be highly creative in exercise selection: free weights, bodyweight, cables, machines, sleds — no limits.
+1️⃣ The workout must be elite-level, functional, strongman-capable.
+2️⃣ Use advanced programming: RPE, %PRs, periodization, supersets, cluster sets, auto-regulation.
+3️⃣ Include a warm-up tailored to today’s lifts.
+4️⃣ Include a finisher for failure + conditioning.
+5️⃣ Be creative: free weights, cables, machines, sleds, strongman implements — no limits.
 6️⃣ Each exercise must include:
    - name
    - primary_muscle
@@ -61,14 +60,14 @@ Rules:
    - sets (int)
    - reps (string, e.g. "5-8 @ RPE 8")
    - weight (string, % of PR if relevant)
-   - superset_group_id (0 means none)
-7️⃣ Must include at least one superset or finisher circuit.
-8️⃣ Ensure intelligent progression vs. last logs.
-9️⃣ Be creative — avoid boring repeats.
-🔟 Return ONLY valid JSON — no text, no explanations.
+   - superset_group_id (0 = none)
+7️⃣ Must have at least 1 superset or finisher circuit.
+8️⃣ Ensure progression vs. last logs.
+9️⃣ Be creative — no boring repeats.
+🔟 Return ONLY valid JSON — no explanations, no text.
 
 Mission:
-Deliver a workout so powerful it could forge a Norse god — safe, savage, and worthy of RAGNARÖK LAB.
+Deliver a workout so savage it could forge a Norse god — safe, progressive, worthy of RAGNARÖK LAB.
 """
 
     try:
