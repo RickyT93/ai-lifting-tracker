@@ -1,6 +1,6 @@
-# ===========================================
-# === RAGNARÖK LAB — Strict User Actions ===
-# ===========================================
+# ==============================
+# === RAGNARÖK LAB (Final Polished)
+# ==============================
 
 import streamlit as st
 from datetime import date
@@ -15,10 +15,14 @@ st.set_page_config(
     layout="wide"
 )
 
-# === STYLE ===
+# === CUSTOM STYLE ===
 st.markdown(f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=UnifrakturCook:wght@700&display=swap');
+
+body, div, p, label, span, input, textarea {{
+  color: #FFF !important;
+}}
 
 body {{
   background: linear-gradient(rgba(0,0,0,0.88), rgba(0,0,0,0.88)),
@@ -26,7 +30,6 @@ body {{
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
-  background-repeat: no-repeat;
 }}
 
 h1 {{
@@ -38,6 +41,10 @@ h1 {{
   margin-top: 80px;
 }}
 
+h2, h3, h4, h5, h6 {{
+  color: #FFF;
+}}
+
 .stButton>button {{
   background: #000;
   color: #FF0000;
@@ -46,10 +53,6 @@ h1 {{
   font-weight: bold;
   padding: 12px 24px;
   font-size: 1.2em;
-}}
-
-input, select, textarea {{
-    color: black !important;
 }}
 
 [data-testid="stSidebar"] {{
@@ -72,24 +75,23 @@ with st.sidebar:
     goal = st.radio("🎯 Goal", ["Hypertrophy", "Strength", "Endurance"])
     workout_date = st.date_input("📅 Workout Date", value=date.today())
 
-    gen_clicked = st.button("⚡ Generate Workout")
-    edit_clicked = st.button("✏️ Edit Workout")
-    delete_clicked = st.button("❌ Delete Workout")
+    generate = st.button("⚡ Generate Workout")
+    edit_trigger = st.button("✏️ Edit Previous Workout")
+    delete_trigger = st.button("❌ Delete Workout")
 
-# === MAIN TITLE ===
+# === MAIN HEADER ===
 st.title("RAGNARÖK LAB")
 
-# === STOP if no URL ===
+# === STOP IF NO SHEET ===
 if not sheet_url:
-    st.info("Paste your Google Sheet URL to unleash the LAB.")
     st.stop()
 
-# === Connect ===
+# === CONNECT SHEET ===
 key = sheet_url.split("/d/")[1].split("/")[0]
 sheet = gc.open_by_key(key).worksheet("WorkoutLog")
 
-# === === GENERATE === ===
-if gen_clicked:
+# === GENERATE ===
+if generate:
     prompt = (
         f"You are an elite strength coach creating a {goal.lower()} {workout_type} workout. "
         "Use modern programming: supersets, periodization, PHUL/PHAT style. "
@@ -127,7 +129,6 @@ if gen_clicked:
     except Exception as e:
         st.error(f"❌ GPT failed: {e}")
 
-# === Display new workout ===
 if "workout_data" in st.session_state:
     st.subheader(f"🆕 {workout_type} Workout for {workout_date.strftime('%Y-%m-%d')}")
     for idx, ex in enumerate(st.session_state["workout_data"]):
@@ -151,46 +152,45 @@ if "workout_data" in st.session_state:
             ])
         st.success("✅ Workout logged!")
         del st.session_state["workout_data"]
+        st.experimental_rerun()
 
-# === === EDIT === ===
-if edit_clicked:
+# === EDIT ===
+if edit_trigger:
     st.subheader("✏️ Edit Workout")
-    date_to_edit = st.date_input("Select Date to Edit", value=date.today())
-    rows = [r for r in sheet.get_all_records() if r["Date"] == date_to_edit.strftime('%Y-%m-%d')]
-    if rows:
-        edited = st.data_editor(rows, num_rows="dynamic")
-        if st.button("💾 Save Edits"):
-            # Overwrite sheet:
-            all = sheet.get_all_records()
-            remaining = [r for r in all if r["Date"] != date_to_edit.strftime('%Y-%m-%d')]
-            sheet.clear()
-            if remaining:
-                sheet.append_row(list(remaining[0].keys()))
-                for row in remaining:
-                    sheet.append_row(list(row.values()))
-            if edited:
-                sheet.append_row(list(edited[0].keys()))
+    edit_date = st.date_input("Select Date to Edit", value=date.today(), key="edit_date")
+    if st.button("🔍 Load to Edit"):
+        rows = sheet.get_all_records()
+        edit_rows = [r for r in rows if r["Date"] == edit_date.strftime('%Y-%m-%d')]
+        if edit_rows:
+            edited = st.data_editor(edit_rows, num_rows="dynamic")
+            if st.button("💾 Save Edits"):
+                headers = sheet.row_values(1)
+                sheet.clear()
+                sheet.append_row(headers)
                 for row in edited:
                     sheet.append_row(list(row.values()))
-            st.success("✅ Edits saved.")
-    else:
-        st.warning("No workout found for this date.")
+                st.success("✅ Edits saved.")
+                st.experimental_rerun()
+        else:
+            st.info("No workouts found for that date.")
 
-# === === DELETE === ===
-if delete_clicked:
-    st.subheader("❌ Delete Workout")
-    date_to_delete = st.date_input("Select Date to Delete", value=date.today())
-    rows = [r for r in sheet.get_all_records() if r["Date"] == date_to_delete.strftime('%Y-%m-%d')]
-    if rows:
-        st.dataframe(rows)
-        if st.button("🔥 Confirm Delete"):
-            all = sheet.get_all_records()
-            remaining = [r for r in all if r["Date"] != date_to_delete.strftime('%Y-%m-%d')]
-            sheet.clear()
-            if remaining:
-                sheet.append_row(list(remaining[0].keys()))
-                for row in remaining:
+# === DELETE ===
+if delete_trigger:
+    st.subheader("🗑️ Delete Workout")
+    delete_date = st.date_input("Select Date to Delete", value=date.today(), key="delete_date")
+    if st.button("🔍 Load to Delete"):
+        rows = sheet.get_all_records()
+        delete_rows = [r for r in rows if r["Date"] == delete_date.strftime('%Y-%m-%d')]
+        if delete_rows:
+            st.dataframe(delete_rows)
+            if st.button("❌ Confirm Delete"):
+                keep_rows = [r for r in rows if r["Date"] != delete_date.strftime('%Y-%m-%d')]
+                headers = sheet.row_values(1)
+                sheet.clear()
+                sheet.append_row(headers)
+                for row in keep_rows:
                     sheet.append_row(list(row.values()))
-            st.success(f"🔥 Deleted workouts from {date_to_delete.strftime('%Y-%m-%d')}")
-    else:
-        st.warning("No workout found for this date.")
+                st.success("✅ Workout deleted.")
+                st.experimental_rerun()
+        else:
+            st.info("No workouts found for that date.")
