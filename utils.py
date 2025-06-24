@@ -1,5 +1,5 @@
 # ============================
-# === utils.py — RAGNARÖK LAB
+# === utils.py (Elite Version)
 # ============================
 
 import json
@@ -8,84 +8,92 @@ import streamlit as st
 from google.oauth2.service_account import Credentials
 from openai import OpenAI
 
-# === Auth ===
+# === Google Sheets Auth ===
 scope = ["https://www.googleapis.com/auth/spreadsheets"]
-creds = Credentials.from_service_account_info(
-    st.secrets["gspread_creds"],
-    scopes=scope
-)
+creds = Credentials.from_service_account_info(st.secrets["gspread_creds"], scopes=scope)
 gc = gspread.authorize(creds)
+
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-# === Evolved Generate Workout ===
-def generate_workout(sheet_key, workout_type, goal):
+def generate_workout(sheet_key, day_type, goal):
     """
-    Pull PR_Baseline + last logs → OpenAI.
+    Generate a personalized elite-level workout using PRs + logs.
     """
 
-    try:
-        pr_sheet = gc.open_by_key(sheet_key).worksheet("PR_Baseline")
-        pr_records = pr_sheet.get_all_records()
-        pr_data = { row["Exercise Name"]: row for row in pr_records }
+    # === Get PRs ===
+    pr_sheet = gc.open_by_key(sheet_key).worksheet("PR_Baseline")
+    pr_records = pr_sheet.get_all_records()
+    pr_data = {row["Exercise Name"]: row["1RM"] for row in pr_records}
 
-        log_sheet = gc.open_by_key(sheet_key).worksheet("WorkoutLog")
-        logs = log_sheet.get_all_records()
-        last_logs = sorted(
-            [row for row in logs if row["Workout Type"] == workout_type],
-            key=lambda x: x["Date"], reverse=True
-        )[:3]
+    # === Get last 3 logs ===
+    log_sheet = gc.open_by_key(sheet_key).worksheet("WorkoutLog")
+    logs = log_sheet.get_all_records()
+    last_logs = [row for row in logs if row["Workout Type"] == day_type]
+    last_logs = sorted(last_logs, key=lambda x: x["Date"], reverse=True)[:3]
 
-    except Exception as e:
-        st.error(f"⚠️ Could not load PRs or logs: {e}")
-        return []
-
-    # Evolved prompt
+    # === Elite Prompt ===
     prompt = f"""
-You are an elite-level strength & functional fitness coach — the caliber of Arnold's secret coach & Hafthor Björnsson's strongman advisor — tasked with crafting a world-class, highly personalized workout plan for today.
+You are an elite-level strength & functional fitness coach — the caliber of Arnold Schwarzenegger's secret coach and Hafthor Björnsson's strongman advisor — tasked with designing an exceptional, highly personalized workout plan for today.
 
-Context:
+Constraints & context:
 - Goal: {goal}
-- Workout Type: {workout_type}
-- User PRs: {json.dumps(pr_data)}
-- Last 3 {workout_type} logs: {json.dumps(last_logs)}
+- Workout Type: {day_type}
+- User’s PRs:
+  - Squat: {pr_data.get('Squat', 'N/A')}
+  - Bench Press: {pr_data.get('Bench Press', 'N/A')}
+  - Deadlift: {pr_data.get('Deadlift', 'N/A')}
+  - Push-ups: {pr_data.get('Push-ups', 'N/A')}
+  - Pull-ups: {pr_data.get('Pull-ups', 'N/A')}
+- Last 3 {day_type} logs:
+{json.dumps(last_logs)}
 
 Rules:
-1️⃣ 5+ exercises, advanced progression.
-2️⃣ Use RPE, %PR, cluster sets, supersets.
-3️⃣ Show creativity, elite level.
-4️⃣ Each exercise must have:
-  - name
-  - primary_muscle
-  - target_muscle_detail
-  - equipment
-  - sets (int)
-  - reps (string)
-  - weight (string)
-  - superset_group_id (0 means none)
-5️⃣ Return ONLY a valid JSON array. No text.
+1️⃣ The workout must be elite-level, functional, and strongman-capable.
+2️⃣ Use advanced programming principles: RPE, % of PRs, periodization, supersets, cluster sets, auto-regulation.
+3️⃣ Include a warm-up recommendation tailored to today’s main lifts.
+4️⃣ Include a finisher recommendation to push beyond failure or add functional conditioning.
+5️⃣ Be highly creative in exercise selection: free weights, bodyweight, cables, machines, sleds — no limits.
+6️⃣ Each exercise must include:
+   - name
+   - primary_muscle
+   - target_muscle_detail
+   - equipment
+   - sets (int)
+   - reps (string, e.g. "5-8 @ RPE 8")
+   - weight (string, % of PR if relevant)
+   - superset_group_id (0 means none)
+7️⃣ Must include at least one superset or finisher circuit.
+8️⃣ Ensure intelligent progression vs. last logs.
+9️⃣ Be creative — avoid boring repeats.
+🔟 Return ONLY valid JSON — no text, no explanations.
 
-Make this session so brutal that even Odin weeps.
+Mission:
+Deliver a workout so powerful it could forge a Norse god — safe, savage, and worthy of RAGNARÖK LAB.
 """
 
     try:
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.3
+            temperature=0.4
         )
         text = response.choices[0].message.content.strip()
         if text.startswith("```"):
             text = "\n".join(text.split("\n")[1:-1]).strip()
 
-        parsed = json.loads(text)
-        return parsed if isinstance(parsed, list) else []
+        return json.loads(text)
 
+    except json.JSONDecodeError as je:
+        st.error(f"⚠️ GPT JSON error: {je}")
+        return []
     except Exception as e:
         st.error(f"⚠️ OpenAI error: {e}")
         return []
 
-# === Log Workout ===
-def log_workout(sheet, workout_data: list):
+def log_workout(sheet, workout_data):
+    """
+    Append rows to WorkoutLog.
+    """
     for row in workout_data:
         sheet.append_row([
             row["Workout ID"], row["Date"], row["Workout Type"],
@@ -94,11 +102,10 @@ def log_workout(sheet, workout_data: list):
             row["Superset Group ID"], row["Notes"]
         ])
 
-# === Helpers ===
-def get_workouts_by_date(sheet, target_date: str):
+def get_workouts_by_date(sheet, target_date):
     return [row for row in sheet.get_all_records() if row["Date"] == target_date]
 
-def overwrite_sheet_with_rows(sheet, rows: list):
+def overwrite_sheet_with_rows(sheet, rows):
     sheet.clear()
     if rows:
         sheet.append_row(list(rows[0].keys()))
