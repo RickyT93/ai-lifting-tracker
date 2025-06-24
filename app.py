@@ -1,5 +1,5 @@
 # ==============================
-# === RAGNARÖK LAB - RED FLAME ===
+# === RAGNARÖK LAB — Final ICE 🔥 ===
 # ==============================
 
 import streamlit as st
@@ -14,22 +14,19 @@ st.set_page_config(
     layout="wide"
 )
 
-# === FLAME STYLE (scaled down) ===
+# === NORDIC FLAME STYLE ===
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=UnifrakturCook:wght@700&family=IM+Fell+English+SC&display=swap');
 
-/* === Global Font === */
 body, h1, h2, h3, h4, h5, h6, p, label, div, span {
   font-family: 'IM Fell English SC', serif;
   color: #e0f7ff !important;
-  font-size: 1.2em;  /* Base body size */
 }
 
-/* === Title Style === */
 .ragnarok-title {
   font-family: 'UnifrakturCook', cursive;
-  font-size: 9vw;  /* Adjusted to ~25% smaller than before */
+  font-size: 9vw;
   text-align: center;
   color: #e0f7ff;
   text-shadow:
@@ -37,44 +34,22 @@ body, h1, h2, h3, h4, h5, h6, p, label, div, span {
     0 0 10px #ff3300,
     0 0 20px #ff6600,
     0 0 40px #ff9900;
-  animation: flameglow 3s infinite alternate;
+  animation: flameglow 2.5s infinite alternate;
 }
 
 @keyframes flameglow {
-  from {
-    text-shadow:
-      0 0 5px #ff0000,
-      0 0 10px #ff3300,
-      0 0 20px #ff6600,
-      0 0 40px #ff9900;
-  }
-  to {
-    text-shadow:
-      0 0 10px #ff3300,
-      0 0 20px #ff6600,
-      0 0 40px #ff9900,
-      0 0 60px #ffcc00;
-  }
+  from { text-shadow:
+    0 0 5px #ff0000,
+    0 0 10px #ff3300,
+    0 0 20px #ff6600,
+    0 0 40px #ff9900; }
+  to { text-shadow:
+    0 0 10px #ff3300,
+    0 0 20px #ff6600,
+    0 0 40px #ff9900,
+    0 0 60px #ffcc00; }
 }
 
-/* === Sidebar === */
-[data-testid="stSidebar"] {
-  background-color: #111;
-}
-
-[data-testid="stSidebar"] * {
-  font-size: 1.2em !important;  /* Clean, balanced size */
-  color: #e0f7ff !important;
-}
-
-[data-testid="stSidebar"] h1,
-[data-testid="stSidebar"] h2,
-[data-testid="stSidebar"] h3 {
-  font-size: 1.3em !important;  /* Slightly bigger headings */
-  font-weight: bold;
-}
-
-/* === Buttons === */
 .stButton>button {
   background: #000;
   color: #ff3300;
@@ -85,9 +60,24 @@ body, h1, h2, h3, h4, h5, h6, p, label, div, span {
   font-size: 1.2em;
 }
 
-/* === Inputs === */
 input, select, textarea, input[type="date"] {
     color: white !important;
+}
+
+[data-testid="stSidebar"] {
+    background-color: #111;
+}
+
+[data-testid="stSidebar"] * {
+    font-size: 16px !important;
+    color: #e0f7ff !important;
+}
+
+[data-testid="stSidebar"] h1,
+[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3 {
+    font-size: 18px !important;
+    font-weight: bold;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -109,15 +99,16 @@ with st.sidebar:
     edit_btn = st.button("✏️ Edit Previous Workout")
     delete_btn = st.button("❌ Delete Workout")
 
-# === HERO ===
+# === HERO TITLE ===
 st.markdown("<h1 class='ragnarok-title'>RAGNARÖK LAB</h1>", unsafe_allow_html=True)
 
 # === STOP IF NO SHEET ===
 if not sheet_url:
     st.stop()
 
+# === SHEET ===
 key = sheet_url.split("/d/")[1].split("/")[0]
-log_sheet = gc.open_by_key(key).worksheet("WorkoutLog")
+sheet = gc.open_by_key(key).worksheet("WorkoutLog")
 
 # === GENERATE ===
 if gen_btn:
@@ -139,45 +130,44 @@ if gen_btn:
         for ex in workout
     ]
 
-# === SHOW + LOG ===
+# === SHOW GENERATED ===
 if "workout_data" in st.session_state:
     st.subheader(f"🆕 {workout_type} Workout for {workout_date.strftime('%Y-%m-%d')}")
     for idx, ex in enumerate(st.session_state["workout_data"]):
         st.markdown(f"**{idx+1}. {ex['Exercise']}**")
         st.caption(f"{ex['Primary Muscle']} → {ex['Target Muscle Detail']}")
         st.text(f"{ex['Sets']} sets × {ex['Reps']}")
+        note_key = f"note_{idx}"
         st.session_state["workout_data"][idx]["Notes"] = st.text_input(
             f"Notes for {ex['Exercise']}",
             value=ex["Notes"],
-            key=f"note_{idx}"
+            key=note_key
         )
 
     if st.button("✅ Log Workout"):
-        log_workout(log_sheet, st.session_state["workout_data"])
+        log_workout(sheet, st.session_state["workout_data"])
         st.success("✅ Workout logged!")
         del st.session_state["workout_data"]
-        st.experimental_rerun()
 
-# === EDIT ===
+# === EDIT / DELETE ===
 if edit_btn:
     st.subheader("✏️ Edit Workout")
     edit_date = st.date_input("Select Date to Edit", key="edit_date")
     if st.button("🔍 Load to Edit"):
-        rows = get_workouts_by_date(log_sheet, edit_date.strftime('%Y-%m-%d'))
-        if rows:
-            edited = st.data_editor(rows, num_rows="dynamic")
+        to_edit = get_workouts_by_date(sheet, edit_date.strftime('%Y-%m-%d'))
+        if to_edit:
+            edited = st.data_editor(to_edit, num_rows="dynamic")
             if st.button("💾 Save Edits"):
-                other_rows = [row for row in log_sheet.get_all_records() if row["Date"] != edit_date.strftime('%Y-%m-%d')]
-                overwrite_sheet_with_rows(log_sheet, other_rows + edited)
+                others = [row for row in sheet.get_all_records() if row["Date"] != edit_date.strftime('%Y-%m-%d')]
+                overwrite_sheet_with_rows(sheet, others + edited)
                 st.success("✅ Edits saved.")
         else:
-            st.warning("No workouts found for that date.")
+            st.warning("No workout found for that date.")
 
-# === DELETE ===
 if delete_btn:
     st.subheader("❌ Delete Workout")
     del_date = st.date_input("Select Date to Delete", key="del_date")
     if st.button("🗑️ Confirm Delete"):
-        keep = [row for row in log_sheet.get_all_records() if row["Date"] != del_date.strftime('%Y-%m-%d')]
-        overwrite_sheet_with_rows(log_sheet, keep)
+        keep = [row for row in sheet.get_all_records() if row["Date"] != del_date.strftime('%Y-%m-%d')]
+        overwrite_sheet_with_rows(sheet, keep)
         st.success(f"✅ Deleted workout for {del_date.strftime('%Y-%m-%d')}.")
