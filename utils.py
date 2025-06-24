@@ -1,5 +1,5 @@
 # ============================
-# === utils.py — Final Build
+# === utils.py (Elite Version)
 # ============================
 
 import json
@@ -10,26 +10,20 @@ from openai import OpenAI
 
 # === Google Sheets Auth ===
 scope = ["https://www.googleapis.com/auth/spreadsheets"]
-creds = Credentials.from_service_account_info(
-    st.secrets["gspread_creds"],
-    scopes=scope
-)
+creds = Credentials.from_service_account_info(st.secrets["gspread_creds"], scopes=scope)
 gc = gspread.authorize(creds)
+
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 def generate_workout(sheet_key, day_type, goal):
     """
-    Generate an elite workout using live PRs and last logs.
+    Generate an elite workout with warmup & finisher, robust structure.
     """
 
     # === Get PRs ===
     pr_sheet = gc.open_by_key(sheet_key).worksheet("PR_Baseline")
     pr_records = pr_sheet.get_all_records()
-    pr_data = {}
-    for row in pr_records:
-        name = row["Exercise Name"]
-        if name in ["Bench Press", "Squat", "Deadlift", "Push-ups", "Pull-ups"]:
-            pr_data[name] = row["1RM"] if name in ["Bench Press", "Squat", "Deadlift"] else row.get("1RM") or row.get("Max") or row.get("Reps")
+    pr_data = {row["Exercise Name"]: row["1RM"] for row in pr_records}
 
     # === Get last 3 logs ===
     log_sheet = gc.open_by_key(sheet_key).worksheet("WorkoutLog")
@@ -37,9 +31,9 @@ def generate_workout(sheet_key, day_type, goal):
     last_logs = [row for row in logs if row["Workout Type"] == day_type]
     last_logs = sorted(last_logs, key=lambda x: x["Date"], reverse=True)[:3]
 
-    # === Master Prompt ===
+    # === Elite Prompt ===
     prompt = f"""
-You are an elite-level strength & functional fitness coach — the caliber of Arnold Schwarzenegger's secret coach and Hafthor Björnsson's strongman advisor — tasked with designing an exceptional, highly personalized workout plan for today.
+You are an elite-level strength & functional fitness coach — the caliber of Arnold Schwarzenegger's secret coach and Hafthor Björnsson's strongman advisor.
 
 Constraints & context:
 - Goal: {goal}
@@ -54,27 +48,17 @@ Constraints & context:
 {json.dumps(last_logs)}
 
 Rules:
-1️⃣ The workout must be elite-level, functional, and strongman-capable.
-2️⃣ Use advanced programming principles: RPE, % of PRs, periodization, supersets, cluster sets, auto-regulation.
-3️⃣ Include a warm-up recommendation tailored to today’s main lifts.
-4️⃣ Include a finisher recommendation to push beyond failure or add functional conditioning.
-5️⃣ Be highly creative: use free weights, bodyweight, cables, machines, sleds, strongman tools — no limits.
-6️⃣ Each exercise must include:
-   - name
-   - primary_muscle
-   - target_muscle_detail
-   - equipment
-   - sets (int)
-   - reps (string, e.g. "5-8 @ RPE 8")
-   - weight (string, % of PR if relevant)
-   - superset_group_id (0 means none)
-7️⃣ Include at least one superset or finisher circuit.
-8️⃣ Ensure intelligent progression vs. last logs — evolve volume, intensity, or variation.
-9️⃣ Be creative — avoid basic repeats.
-🔟 Return ONLY valid JSON — no explanations, no text, no code block.
+1️⃣ JSON must have keys: "warmup" (string), "workout" (list), "finisher" (string).
+2️⃣ Each workout item must include:
+   - name, primary_muscle, target_muscle_detail, equipment, sets (int), reps (string), weight (string), superset_group_id (int)
+3️⃣ Use advanced programming: RPE, %PRs, periodization, supersets, cluster sets, auto-regulation.
+4️⃣ Be highly creative: free weights, bodyweight, cables, sleds — no limits.
+5️⃣ Must include at least one superset pair or finisher circuit.
+6️⃣ Ensure intelligent progression vs. last logs.
+7️⃣ Return ONLY valid JSON — no text, no explanations.
 
 Mission:
-Deliver a workout so powerful it could forge a Norse god — safe, savage, progressive, and worthy of RAGNARÖK LAB.
+Deliver a workout so powerful it could forge a Norse god — safe, savage, and worthy of RAGNARÖK LAB.
 """
 
     try:
@@ -87,14 +71,13 @@ Deliver a workout so powerful it could forge a Norse god — safe, savage, progr
         if text.startswith("```"):
             text = "\n".join(text.split("\n")[1:-1]).strip()
 
-        return json.loads(text)
+        result = json.loads(text)
+        return result  # { "warmup": "...", "workout": [...], "finisher": "..." }
 
-    except json.JSONDecodeError as je:
-        st.error(f"⚠️ GPT JSON error: {je}")
-        return []
     except Exception as e:
         st.error(f"⚠️ OpenAI error: {e}")
-        return []
+        return {"warmup": "", "workout": [], "finisher": ""}
+
 
 def log_workout(sheet, workout_data):
     for row in workout_data:
@@ -105,8 +88,10 @@ def log_workout(sheet, workout_data):
             row["Superset Group ID"], row["Notes"]
         ])
 
+
 def get_workouts_by_date(sheet, target_date):
     return [row for row in sheet.get_all_records() if row["Date"] == target_date]
+
 
 def overwrite_sheet_with_rows(sheet, rows):
     sheet.clear()
