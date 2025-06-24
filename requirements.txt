@@ -2,4 +2,3 @@ streamlit
 openai
 gspread
 google-auth
-sqlite3
