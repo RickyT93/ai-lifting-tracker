@@ -1,81 +1,95 @@
+# --------------------------
+# FINAL APP.PY - AI Lifting Tracker
+# --------------------------
+
 import streamlit as st
+from datetime import date
 import gspread
 from google.oauth2.service_account import Credentials
-from datetime import date
 import json
 from openai import OpenAI
 import pandas as pd
 
-# === Connect ===
+# --------------------------
+# === CONFIG ===
+# --------------------------
+st.set_page_config(
+    page_title="🏋️ AI Lifting Tracker",
+    layout="centered",
+)
+
+# Palantir-inspired theme (basic)
+st.markdown("""
+<style>
+body {
+    background-color: #000000;
+    color: #FFFFFF;
+}
+.stButton>button {
+    background-color: #00B4FF;
+    color: black;
+    border-radius: 4px;
+}
+input, select, textarea {
+    color: black !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# --------------------------
+# === SETUP ===
+# --------------------------
 scope = ["https://www.googleapis.com/auth/spreadsheets"]
-creds = Credentials.from_service_account_info(st.secrets["gspread_creds"], scopes=scope)
+creds = Credentials.from_service_account_info(
+    st.secrets["gspread_creds"], scopes=scope)
 gc = gspread.authorize(creds)
+
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-st.set_page_config(page_title="🏋️ AI Lifting Tracker", layout="centered")
+# --------------------------
+# === INPUTS ===
+# --------------------------
 st.title("🏋️ AI Lifting Tracker")
 
-# === Inputs ===
 sheet_url = st.text_input(
     "📄 Paste your Google Sheet URL (must be shared with the service account as Editor)"
 )
-selected_day = st.selectbox("📆 Workout Type", ["Push", "Pull", "Legs"])
+day_type = st.selectbox("📆 Workout Type", ["Push", "Pull", "Legs"])
 goal = st.radio("🎯 Goal", ["Hypertrophy", "Strength", "Endurance"], index=0)
-custom_date = st.date_input("📅 Workout Date", value=date.today())
+workout_date = st.date_input("📅 Workout Date", value=date.today())
 
-# === Get Sheet ===
-if sheet_url:
+# --------------------------
+# === LOAD SHEET ===
+# --------------------------
+def get_sheet(sheet_url):
     key = sheet_url.split("/d/")[1].split("/")[0]
-    sheet = gc.open_by_key(key).worksheet("WorkoutLog")
+    return gc.open_by_key(key).worksheet("WorkoutLog")
 
-    # === Pull LAST workout(s) ===
-    data = pd.DataFrame(sheet.get_all_records())
-    prev = data[data["Workout Type"] == selected_day].sort_values(by="Date", ascending=False)
-    last = prev.head(3)
+# --------------------------
+# === GET PREVIOUS WORKOUT ===
+# --------------------------
+def fetch_previous_workouts(sheet, day_type, n=3):
+    records = sheet.get_all_records()
+    df = pd.DataFrame(records)
+    if df.empty:
+        return pd.DataFrame()
+    df["Date"] = pd.to_datetime(df["Date"])
+    df = df[df["Workout Type"] == day_type]
+    latest_dates = df["Date"].drop_duplicates().sort_values(ascending=False).head(n)
+    return df[df["Date"].isin(latest_dates)].sort_values(by=["Date", "Exercise"])
 
-    with st.expander(f"📜 Last {selected_day} Workouts"):
-        if last.empty:
-            st.info(f"No previous {selected_day} workouts found.")
-        else:
-            st.dataframe(last[["Date", "Exercise", "Sets", "Reps", "Weight", "Notes"]])
-
-    # === Edit Last Workout ===
-    if not last.empty:
-        st.subheader(f"✏️ Edit Most Recent {selected_day} Workout")
-        edited = []
-        for i, row in last.iterrows():
-            st.markdown(f"**{row['Exercise']}** ({row['Date']})")
-            sets = st.number_input(f"Sets for {row['Exercise']}", value=int(row['Sets']), key=f"sets_{i}")
-            reps = st.text_input(f"Reps for {row['Exercise']}", value=row['Reps'], key=f"reps_{i}")
-            weight = st.text_input(f"Weight for {row['Exercise']}", value=row['Weight'], key=f"weight_{i}")
-            notes = st.text_input(f"Notes for {row['Exercise']}", value=row['Notes'], key=f"notes_{i}")
-            edited.append({
-                "row_number": i + 2,  # +2 because Google Sheets rows are 1-indexed and header is row 1
-                "Sets": sets,
-                "Reps": reps,
-                "Weight": weight,
-                "Notes": notes
-            })
-
-        if st.button("💾 Save Edits to Google Sheets"):
-            for update in edited:
-                sheet.update_cell(update["row_number"], 6, update["Sets"])
-                sheet.update_cell(update["row_number"], 7, update["Reps"])
-                sheet.update_cell(update["row_number"], 8, update["Weight"])
-                sheet.update_cell(update["row_number"], 10, update["Notes"])
-            st.success("✅ Updates saved!")
-
-# === Generate NEW Workout ===
-if st.button("Generate Workout") and sheet_url:
-    with st.spinner("Generating workout..."):
-        prompt = (
-            f"You are an elite strength coach writing a {goal} '{selected_day}' workout "
-            "using proven programs (PHUL, 5x5, DUP). "
-            f"Here are the last 3 {selected_day} logs: {last.to_dict(orient='records')}. "
-            "Create 5 exercises with name, primary muscle, target detail, sets (int), reps (range), superset ID, weight 'Auto'. "
-            "Return only a JSON array. No extra text."
-        )
-
+# --------------------------
+# === GPT WORKOUT GENERATION ===
+# --------------------------
+def generate_workout(day_type, goal):
+    prompt = (
+        f"You are a world-class strength training coach. Generate a detailed {goal} workout "
+        f"for a {day_type} day, following modern progressive overload principles, using "
+        f"evidence-based rep and set schemes for intermediate lifters. Include exact target muscle detail, "
+        f"primary muscle group, sets (int), reps (string), weight ('Auto'), and suggested superset pairings "
+        f"(assign a Superset Group ID integer, 1 means not superset). Return only JSON array of 5 exercises."
+    )
+    try:
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[{"role": "user", "content": prompt}],
@@ -84,50 +98,93 @@ if st.button("Generate Workout") and sheet_url:
         text = response.choices[0].message.content.strip()
         if text.startswith("```"):
             text = "\n".join(text.split("\n")[1:-1]).strip()
-        exercises = json.loads(text)
+        return json.loads(text)
+    except Exception as e:
+        st.error(f"❌ GPT Error: {e}")
+        return []
 
-        st.session_state["new_workout"] = [
-            {
-                "Workout ID": f"{custom_date.strftime('%Y%m%d')}-{selected_day}",
-                "Date": custom_date.strftime("%Y-%m-%d"),
-                "Workout Type": selected_day,
-                "Exercise": ex["name"],
-                "Primary Muscle": ex["primary_muscle"],
-                "Target Muscle Detail": ex["target_muscle_detail"],
-                "Sets": ex["sets"],
-                "Reps": ex["reps"],
-                "Weight": ex["weight"],
-                "Superset Group ID": ex["superset_group_id"],
-                "Notes": ""
-            }
-            for ex in exercises
-        ]
+# --------------------------
+# === LOG TO SHEET ===
+# --------------------------
+def log_workout(sheet, data):
+    for row in data:
+        sheet.append_row([
+            row["Workout ID"],
+            row["Date"],
+            row["Workout Type"],
+            row["Exercise"],
+            row["Primary Muscle"],
+            row["Target Muscle Detail"],
+            row["Sets"],
+            row["Reps"],
+            row["Weight"],
+            row["Superset Group ID"],
+            row["Notes"]
+        ])
 
-# === Show NEW Workout & Log ===
-if "new_workout" in st.session_state:
-    st.subheader(f"{selected_day} Workout for {custom_date.strftime('%Y-%m-%d')}")
-    for idx, ex in enumerate(st.session_state["new_workout"]):
-        st.markdown(f"**{idx+1}. {ex['Exercise']}**")
-        st.caption(f"{ex['Primary Muscle']} → {ex['Target Muscle Detail']} | Sets: {ex['Sets']} x Reps: {ex['Reps']}")
-        note_key = f"note_{idx}"
-        st.session_state["new_workout"][idx]["Notes"] = st.text_input(
-            f"Notes for {ex['Exercise']}", value=ex["Notes"], key=note_key
-        )
+# --------------------------
+# === MAIN ACTION ===
+# --------------------------
+if sheet_url:
+    sheet = get_sheet(sheet_url)
 
-    if st.button("Log New Workout"):
-        for row in st.session_state["new_workout"]:
-            sheet.append_row([
-                row["Workout ID"],
-                row["Date"],
-                row["Workout Type"],
-                row["Exercise"],
-                row["Primary Muscle"],
-                row["Target Muscle Detail"],
-                row["Sets"],
-                row["Reps"],
-                row["Weight"],
-                row["Superset Group ID"],
-                row["Notes"]
-            ])
-        st.success("✅ New Workout Logged!")
-        del st.session_state["new_workout"]
+    # Display previous workouts
+    prev_df = fetch_previous_workouts(sheet, day_type)
+    if not prev_df.empty:
+        st.subheader(f"📜 Last {day_type} Workouts")
+        st.dataframe(prev_df)
+
+        st.subheader("✏️ Edit Previous")
+        editable = prev_df.copy()
+        edited = st.data_editor(editable, num_rows="dynamic", use_container_width=True)
+        if st.button("Save Edits"):
+            # Overwrite: Clear old & re-upload
+            all_records = sheet.get_all_records()
+            all_df = pd.DataFrame(all_records)
+            all_df = all_df[~(
+                (all_df["Workout Type"] == day_type) &
+                (all_df["Date"].isin(prev_df["Date"].unique()))
+            )]
+            final_df = pd.concat([all_df, edited]).sort_values(by=["Date"])
+            sheet.clear()
+            sheet.append_row(list(final_df.columns))
+            for _, row in final_df.iterrows():
+                sheet.append_row(row.tolist())
+            st.success("✅ Edits Saved!")
+
+    # Generate new workout
+    if st.button("Generate New Workout"):
+        st.session_state.workout = generate_workout(day_type, goal)
+        if not st.session_state.workout:
+            st.stop()
+
+    if "workout" in st.session_state:
+        st.subheader(f"{day_type} Workout for {workout_date}")
+        for idx, ex in enumerate(st.session_state.workout):
+            st.markdown(f"**{idx+1}. {ex['name']}**")
+            st.caption(f"{ex['Primary Muscle']} → {ex['Target Muscle Detail']} | Sets: {ex['sets']} | Reps: {ex['reps']}")
+            st.session_state.workout[idx]["Notes"] = st.text_input(
+                f"Notes for {ex['name']}",
+                key=f"note_{idx}"
+            )
+
+        if st.button("Log New Workout"):
+            today_id = f"{workout_date.strftime('%Y%m%d')}-{day_type}"
+            rows_to_log = []
+            for ex in st.session_state.workout:
+                rows_to_log.append({
+                    "Workout ID": today_id,
+                    "Date": workout_date.strftime("%Y-%m-%d"),
+                    "Workout Type": day_type,
+                    "Exercise": ex["name"],
+                    "Primary Muscle": ex["Primary Muscle"],
+                    "Target Muscle Detail": ex["Target Muscle Detail"],
+                    "Sets": ex["sets"],
+                    "Reps": ex["reps"],
+                    "Weight": ex["weight"],
+                    "Superset Group ID": ex.get("Superset Group ID", 1),
+                    "Notes": ex["Notes"]
+                })
+            log_workout(sheet, rows_to_log)
+            st.success("✅ Workout Logged!")
+            del st.session_state.workout
