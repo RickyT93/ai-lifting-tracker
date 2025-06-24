@@ -1,13 +1,10 @@
 # ==============================
-# === RAGNARÖK LAB (Final Polished)
+# === RAGNARÖK LAB — FINAL CLEAN ===
 # ==============================
 
 import streamlit as st
 from datetime import date
-import gspread
-from google.oauth2.service_account import Credentials
-from openai import OpenAI
-import json
+import utils  # ✅ USE YOUR UTILS!
 
 # === CONFIG ===
 st.set_page_config(
@@ -15,7 +12,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# === CUSTOM STYLE ===
+# === STYLE ===
 st.markdown(f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=UnifrakturCook:wght@700&display=swap');
@@ -35,7 +32,6 @@ body {{
 h1 {{
   font-family: 'UnifrakturCook', cursive;
   font-size: 7em;
-  color: #FFF;
   text-align: center;
   text-shadow: 4px 4px #000;
   margin-top: 80px;
@@ -61,12 +57,6 @@ h2, h3, h4, h5, h6 {{
 </style>
 """, unsafe_allow_html=True)
 
-# === AUTH ===
-scope = ["https://www.googleapis.com/auth/spreadsheets"]
-creds = Credentials.from_service_account_info(st.secrets["gspread_creds"], scopes=scope)
-gc = gspread.authorize(creds)
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
-
 # === SIDEBAR ===
 with st.sidebar:
     st.header("⚙️ Controls")
@@ -79,7 +69,7 @@ with st.sidebar:
     edit_trigger = st.button("✏️ Edit Previous Workout")
     delete_trigger = st.button("❌ Delete Workout")
 
-# === MAIN HEADER ===
+# === MAIN TITLE ===
 st.title("RAGNARÖK LAB")
 
 # === STOP IF NO SHEET ===
@@ -88,46 +78,27 @@ if not sheet_url:
 
 # === CONNECT SHEET ===
 key = sheet_url.split("/d/")[1].split("/")[0]
-sheet = gc.open_by_key(key).worksheet("WorkoutLog")
+sheet = utils.gc.open_by_key(key).worksheet("WorkoutLog")
 
 # === GENERATE ===
 if generate:
-    prompt = (
-        f"You are an elite strength coach creating a {goal.lower()} {workout_type} workout. "
-        "Use modern programming: supersets, periodization, PHUL/PHAT style. "
-        "Return JSON: 5 exercises. Each: name, primary_muscle, target_muscle_detail, "
-        "equipment, sets (int), reps (string), weight ('Auto'), superset_group_id (int)."
-    )
-    try:
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.4
-        )
-        text = response.choices[0].message.content.strip()
-        if text.startswith("```"):
-            text = "\n".join(text.split("\n")[1:-1]).strip()
-
-        workout = json.loads(text)
-        st.session_state["workout_data"] = [
-            {
-                "Workout ID": f"{workout_date.strftime('%Y%m%d')}-{workout_type}",
-                "Date": workout_date.strftime('%Y-%m-%d'),
-                "Workout Type": workout_type,
-                "Exercise": ex["name"],
-                "Primary Muscle": ex["primary_muscle"],
-                "Target Muscle Detail": ex["target_muscle_detail"],
-                "Sets": ex["sets"],
-                "Reps": ex["reps"],
-                "Weight": ex["weight"],
-                "Superset Group ID": ex["superset_group_id"],
-                "Notes": ""
-            }
-            for ex in workout
-        ]
-
-    except Exception as e:
-        st.error(f"❌ GPT failed: {e}")
+    workout = utils.generate_workout(workout_type, goal)
+    st.session_state["workout_data"] = [
+        {
+            "Workout ID": f"{workout_date.strftime('%Y%m%d')}-{workout_type}",
+            "Date": workout_date.strftime('%Y-%m-%d'),
+            "Workout Type": workout_type,
+            "Exercise": ex["name"],
+            "Primary Muscle": ex["primary_muscle"],
+            "Target Muscle Detail": ex["target_muscle_detail"],
+            "Sets": ex["sets"],
+            "Reps": ex["reps"],
+            "Weight": ex["weight"],
+            "Superset Group ID": ex["superset_group_id"],
+            "Notes": ""
+        }
+        for ex in workout
+    ]
 
 if "workout_data" in st.session_state:
     st.subheader(f"🆕 {workout_type} Workout for {workout_date.strftime('%Y-%m-%d')}")
@@ -143,13 +114,7 @@ if "workout_data" in st.session_state:
         )
 
     if st.button("✅ Log Workout"):
-        for row in st.session_state["workout_data"]:
-            sheet.append_row([
-                row["Workout ID"], row["Date"], row["Workout Type"],
-                row["Exercise"], row["Primary Muscle"], row["Target Muscle Detail"],
-                row["Sets"], row["Reps"], row["Weight"],
-                row["Superset Group ID"], row["Notes"]
-            ])
+        utils.log_workout(sheet, st.session_state["workout_data"])
         st.success("✅ Workout logged!")
         del st.session_state["workout_data"]
         st.experimental_rerun()
@@ -159,38 +124,29 @@ if edit_trigger:
     st.subheader("✏️ Edit Workout")
     edit_date = st.date_input("Select Date to Edit", value=date.today(), key="edit_date")
     if st.button("🔍 Load to Edit"):
-        rows = sheet.get_all_records()
-        edit_rows = [r for r in rows if r["Date"] == edit_date.strftime('%Y-%m-%d')]
+        edit_rows = utils.get_workouts_by_date(sheet, edit_date.strftime('%Y-%m-%d'))
         if edit_rows:
             edited = st.data_editor(edit_rows, num_rows="dynamic")
             if st.button("💾 Save Edits"):
-                headers = sheet.row_values(1)
-                sheet.clear()
-                sheet.append_row(headers)
-                for row in edited:
-                    sheet.append_row(list(row.values()))
+                utils.overwrite_sheet_with_rows(sheet, edited)
                 st.success("✅ Edits saved.")
                 st.experimental_rerun()
         else:
-            st.info("No workouts found for that date.")
+            st.info("No workouts for that date.")
 
 # === DELETE ===
 if delete_trigger:
     st.subheader("🗑️ Delete Workout")
     delete_date = st.date_input("Select Date to Delete", value=date.today(), key="delete_date")
     if st.button("🔍 Load to Delete"):
-        rows = sheet.get_all_records()
-        delete_rows = [r for r in rows if r["Date"] == delete_date.strftime('%Y-%m-%d')]
+        delete_rows = utils.get_workouts_by_date(sheet, delete_date.strftime('%Y-%m-%d'))
         if delete_rows:
             st.dataframe(delete_rows)
             if st.button("❌ Confirm Delete"):
-                keep_rows = [r for r in rows if r["Date"] != delete_date.strftime('%Y-%m-%d')]
-                headers = sheet.row_values(1)
-                sheet.clear()
-                sheet.append_row(headers)
-                for row in keep_rows:
-                    sheet.append_row(list(row.values()))
+                all_rows = sheet.get_all_records()
+                keep_rows = [r for r in all_rows if r["Date"] != delete_date.strftime('%Y-%m-%d')]
+                utils.overwrite_sheet_with_rows(sheet, keep_rows)
                 st.success("✅ Workout deleted.")
                 st.experimental_rerun()
         else:
-            st.info("No workouts found for that date.")
+            st.info("No workouts for that date.")
