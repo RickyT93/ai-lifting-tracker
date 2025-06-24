@@ -1,5 +1,5 @@
 # ==============================
-# === RAGNARÖK LAB — Final Build with Auto-Clear ===
+# === RAGNARÖK LAB — Final Stable
 # ==============================
 
 import streamlit as st
@@ -89,7 +89,11 @@ log_sheet = gc.open_by_key(key).worksheet("WorkoutLog")
 
 # === GENERATE ===
 if gen_btn:
-    workout = generate_workout(key, workout_type, goal)
+    result = generate_workout(key, workout_type, goal)
+    workout = result.get("workout", [])
+    warmup = result.get("warmup", "")
+    finisher = result.get("finisher", "")
+
     if workout:
         st.session_state["workout_data"] = [
             {
@@ -107,26 +111,33 @@ if gen_btn:
             }
             for ex in workout
         ]
+        st.session_state["warmup"] = warmup
+        st.session_state["finisher"] = finisher
 
 # === SHOW GENERATED ===
 if "workout_data" in st.session_state:
+    st.subheader(f"🔥 Warm-up: {st.session_state.get('warmup', '')}")
     st.subheader(f"🆕 {workout_type} Workout for {workout_date.strftime('%Y-%m-%d')}")
     for idx, ex in enumerate(st.session_state["workout_data"]):
         st.markdown(f"**{idx+1}. {ex['Exercise']}**")
         st.caption(f"{ex['Primary Muscle']} → {ex['Target Muscle Detail']}")
         st.text(f"{ex['Sets']} sets × {ex['Reps']}")
         note_key = f"note_{idx}"
-        st.session_state["workout_data"][idx]["Notes"] = st.text_input(
+        st.session_state["workout_data"][idx]["Notes"] = st.text_area(
             f"Notes for {ex['Exercise']}",
             value=ex["Notes"],
             key=note_key
         )
 
-    # ✅ Updated log & auto-clear!
+    st.subheader(f"💥 Finisher: {st.session_state.get('finisher', '')}")
+
     if st.button("✅ Log Workout"):
         log_workout(log_sheet, st.session_state["workout_data"])
         st.success("✅ Workout logged!")
-        st.session_state.pop("workout_data", None)
+        # CLEAR
+        for k in ["workout_data", "warmup", "finisher"]:
+            if k in st.session_state:
+                del st.session_state[k]
         st.experimental_rerun()
 
 # === EDIT ===
