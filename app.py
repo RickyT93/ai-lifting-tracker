@@ -1,5 +1,5 @@
 # ==============================
-# === AI Lifting Tracker (Refined)
+# === AI Lifting Tracker (Full Refined)
 # ==============================
 import streamlit as st
 from datetime import date
@@ -14,12 +14,24 @@ st.set_page_config(
     layout="wide"
 )
 
+# === CUSTOM CSS ===
 st.markdown("""
 <style>
 body {
     background-color: #000000;
     color: #FFFFFF;
+    background-image: url('static/atlas_intro.png');
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    animation: fadeBG 3s ease-in-out forwards;
 }
+
+@keyframes fadeBG {
+    from { opacity: 0.4; }
+    to { opacity: 0.05; }
+}
+
 h1, h2, h3, h4, h5, h6 {
     color: #00B4FF;
 }
@@ -48,30 +60,32 @@ with st.sidebar:
     goal = st.radio("🎯 Goal", ["Hypertrophy", "Strength", "Endurance"])
     workout_date = st.date_input("📅 Workout Date", value=date.today())
 
-    if st.button("⚡ Generate Workout"):
-        st.session_state.generated = True
+    st.divider()
+    generate = st.button("⚡ Generate Workout")
+
+    st.divider()
+    edit_previous = st.button("✏️ Edit Previous")
+    delete_previous = st.button("🗑️ Delete Previous")
 
 # === MAIN ===
 st.title("🏋️ AI Lifting Tracker")
 
 if sheet_url:
-    # Extract sheet
     key = sheet_url.split("/d/")[1].split("/")[0]
     sheet = gc.open_by_key(key).worksheet("WorkoutLog")
 
-    # === SHOW PREVIOUS ===
     all_records = sheet.get_all_records()
     prev = [row for row in all_records if row["Workout Type"] == workout_type]
-    prev_sorted = sorted(prev, key=lambda x: x["Date"], reverse=True)[:3]
+    prev_sorted = sorted(prev, key=lambda x: x["Date"], reverse=True)
 
-    st.subheader(f"📑 Last {len(prev_sorted)} {workout_type} Workouts")
     if prev_sorted:
-        st.dataframe(prev_sorted)
+        st.subheader(f"📑 Last 3 {workout_type} Workouts")
+        st.dataframe(prev_sorted[:3])
     else:
         st.info("No history yet — generate your first workout!")
 
     # === GENERATE ===
-    if "generated" in st.session_state:
+    if generate:
         prompt = (
             f"You are an elite strength coach creating a {goal.lower()} {workout_type} workout. "
             "Use modern programming: supersets, periodization, PHUL/PHAT style. "
@@ -89,7 +103,6 @@ if sheet_url:
                 text = "\n".join(text.split("\n")[1:-1]).strip()
 
             workout = json.loads(text)
-
             st.session_state["workout_data"] = [
                 {
                     "Workout ID": f"{workout_date.strftime('%Y%m%d')}-{workout_type}",
@@ -110,7 +123,6 @@ if sheet_url:
         except Exception as e:
             st.error(f"❌ GPT failed: {e}")
 
-    # === SHOW GENERATED + LOG ===
     if "workout_data" in st.session_state:
         st.subheader(f"🆕 {workout_type} Workout for {workout_date.strftime('%Y-%m-%d')}")
         for idx, ex in enumerate(st.session_state["workout_data"]):
@@ -135,26 +147,48 @@ if sheet_url:
             st.success("✅ Workout logged!")
             del st.session_state["workout_data"]
 
-    # === EDIT PREVIOUS ===
-    if prev_sorted:
+    # === EDIT ===
+    if edit_previous and prev_sorted:
         st.subheader("✏️ Edit Previous Workout")
-        edited = st.data_editor(prev_sorted, num_rows="dynamic")
+        dates = sorted({r["Date"] for r in prev_sorted}, reverse=True)
+        date_to_edit = st.selectbox("Select a date to edit:", dates)
+        edit_data = [r for r in prev_sorted if r["Date"] == date_to_edit]
+        edited = st.data_editor(edit_data, num_rows="dynamic")
         if st.button("💾 Save Edits"):
-            try:
-                sheet.clear()
-                headers = ["Workout ID","Date","Workout Type","Exercise","Primary Muscle",
-                           "Target Muscle Detail","Sets","Reps","Weight","Superset Group ID","Notes"]
-                sheet.append_row(headers)
-                for row in edited:
-                    sheet.append_row([
-                        row["Workout ID"], row["Date"], row["Workout Type"],
-                        row["Exercise"], row["Primary Muscle"], row["Target Muscle Detail"],
-                        row["Sets"], row["Reps"], row["Weight"],
-                        row["Superset Group ID"], row["Notes"]
-                    ])
-                st.success("✅ Edits saved!")
-            except Exception as e:
-                st.error(f"❌ Failed to save edits: {e}")
+            # Remove old rows for that date
+            new_data = [r for r in all_records if r["Date"] != date_to_edit]
+            sheet.clear()
+            headers = ["Workout ID","Date","Workout Type","Exercise","Primary Muscle",
+                       "Target Muscle Detail","Sets","Reps","Weight","Superset Group ID","Notes"]
+            sheet.append_row(headers)
+            for row in new_data + edited:
+                sheet.append_row([
+                    row["Workout ID"], row["Date"], row["Workout Type"],
+                    row["Exercise"], row["Primary Muscle"], row["Target Muscle Detail"],
+                    row["Sets"], row["Reps"], row["Weight"],
+                    row["Superset Group ID"], row["Notes"]
+                ])
+            st.success("✅ Edits saved!")
+
+    # === DELETE ===
+    if delete_previous and prev_sorted:
+        st.subheader("🗑️ Delete Previous Workout")
+        dates = sorted({r["Date"] for r in prev_sorted}, reverse=True)
+        date_to_delete = st.selectbox("Select a date to delete:", dates)
+        if st.button("🔥 Confirm Delete"):
+            new_data = [r for r in all_records if r["Date"] != date_to_delete]
+            sheet.clear()
+            headers = ["Workout ID","Date","Workout Type","Exercise","Primary Muscle",
+                       "Target Muscle Detail","Sets","Reps","Weight","Superset Group ID","Notes"]
+            sheet.append_row(headers)
+            for row in new_data:
+                sheet.append_row([
+                    row["Workout ID"], row["Date"], row["Workout Type"],
+                    row["Exercise"], row["Primary Muscle"], row["Target Muscle Detail"],
+                    row["Sets"], row["Reps"], row["Weight"],
+                    row["Superset Group ID"], row["Notes"]
+                ])
+            st.success(f"✅ Deleted all entries for {date_to_delete}!")
 
 else:
     st.info("Paste your Google Sheet URL in the sidebar to begin.")
