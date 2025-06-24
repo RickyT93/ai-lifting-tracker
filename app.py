@@ -1,5 +1,5 @@
 # ==============================
-# === RAGNARÖK LAB 🔥🔥🔥 ===
+# === RAGNARÖK LAB - Nordic ICE ===
 # ==============================
 
 import streamlit as st
@@ -15,55 +15,46 @@ st.set_page_config(
     layout="wide"
 )
 
-# === FIRE EFFECT CSS ===
+# === NORDIC ICE CSS ===
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=UnifrakturCook:wght@700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=UnifrakturCook:wght@700&family=IM+Fell+English+SC&display=swap');
+
+body, h1, h2, h3, h4, h5, h6, p, label, div, span {
+  font-family: 'IM Fell English SC', serif;
+  color: #e0f7ff !important;
+}
 
 .ragnarok-title {
   font-family: 'UnifrakturCook', cursive;
   font-size: 12vw;
   text-align: center;
-  color: #fff;
+  color: #e0f7ff;
   text-shadow:
-    0 0 5px #ff0000,
-    0 0 10px #ff3300,
-    0 0 20px #ff6600,
-    0 0 40px #ff9900;
-  animation: flicker 2s infinite;
+    0 0 5px #00ffff,
+    0 0 10px #33ffff,
+    0 0 20px #66ffff,
+    0 0 40px #99ffff;
+  animation: iceglow 3s infinite alternate;
 }
 
-@keyframes flicker {
-  0% { opacity: 1; text-shadow:
-    0 0 5px #ff0000,
-    0 0 10px #ff3300,
-    0 0 20px #ff6600,
-    0 0 40px #ff9900; }
-  50% { opacity: 0.85; text-shadow:
-    0 0 10px #ff3300,
-    0 0 20px #ff6600,
-    0 0 30px #ff9900,
-    0 0 50px #ffcc00; }
-  100% { opacity: 1; text-shadow:
-    0 0 5px #ff0000,
-    0 0 10px #ff3300,
-    0 0 20px #ff6600,
-    0 0 40px #ff9900; }
-}
-
-body {
-  background: black;
-  color: white;
-}
-
-h2, h3, h4, h5, h6, p, span, label, div {
-  color: white !important;
+@keyframes iceglow {
+  from { text-shadow:
+    0 0 5px #00ffff,
+    0 0 10px #33ffff,
+    0 0 20px #66ffff,
+    0 0 40px #99ffff; }
+  to { text-shadow:
+    0 0 10px #33ffff,
+    0 0 20px #66ffff,
+    0 0 40px #99ffff,
+    0 0 60px #ccffff; }
 }
 
 .stButton>button {
   background: #000;
-  color: #FF0000;
-  border: 2px solid #FF0000;
+  color: #00ffff;
+  border: 2px solid #00ffff;
   border-radius: 8px;
   font-weight: bold;
   padding: 12px 24px;
@@ -77,6 +68,7 @@ input, select, textarea {
 [data-testid="stSidebar"] {
     background-color: #111;
 }
+
 </style>
 """, unsafe_allow_html=True)
 
