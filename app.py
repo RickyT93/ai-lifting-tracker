@@ -1,5 +1,5 @@
 # ==============================
-# === RAGNARÖK LAB - ELITE 🔥 ===
+# === RAGNARÖK LAB - RED FLAME ===
 # ==============================
 
 import streamlit as st
@@ -14,7 +14,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# === RED FLAME STYLE ===
+# === FLAME STYLE (scaled down) ===
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=UnifrakturCook:wght@700&display=swap');
@@ -22,11 +22,11 @@ st.markdown("""
 body, h1, h2, h3, h4, h5, h6, p, label, div, span {
   font-family: 'UnifrakturCook', cursive;
   color: #FFEEEE !important;
-  font-size: 2em !important;
+  font-size: 1.2em !important;
 }
 
 .ragnarok-title {
-  font-size: 20vw;
+  font-size: 10vw;
   text-align: center;
   color: #FF3300;
   text-shadow:
@@ -56,18 +56,17 @@ body, h1, h2, h3, h4, h5, h6, p, label, div, span {
   border: 2px solid #FF3300;
   border-radius: 8px;
   font-weight: bold;
-  padding: 16px 32px;
-  font-size: 1.8em;
+  padding: 12px 24px;
+  font-size: 1.2em;
 }
 
 input, select, textarea, input[type="date"] {
-    color: white !important;
+  color: white !important;
 }
 
 [data-testid="stSidebar"] {
-    background-color: #111;
+  background-color: #111;
 }
-
 </style>
 """, unsafe_allow_html=True)
 
