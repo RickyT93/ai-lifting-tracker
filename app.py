@@ -1,6 +1,6 @@
-# ==============================
-# === RAGNARÖK LAB ===
-# ==============================
+# ===========================================
+# === RAGNARÖK LAB — Strict User Actions ===
+# ===========================================
 
 import streamlit as st
 from datetime import date
@@ -15,7 +15,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# === CUSTOM STYLE ===
+# === STYLE ===
 st.markdown(f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=UnifrakturCook:wght@700&display=swap');
@@ -36,10 +36,6 @@ h1 {{
   text-align: center;
   text-shadow: 4px 4px #000;
   margin-top: 80px;
-}}
-
-h2, h3, h4, h5, h6 {{
-  color: #FFF;
 }}
 
 .stButton>button {{
@@ -76,34 +72,24 @@ with st.sidebar:
     goal = st.radio("🎯 Goal", ["Hypertrophy", "Strength", "Endurance"])
     workout_date = st.date_input("📅 Workout Date", value=date.today())
 
-    st.button("⚡ Generate Workout")
-    st.button("✏️ Edit Previous Workouts")
-    st.button("❌ Delete Workout")
+    gen_clicked = st.button("⚡ Generate Workout")
+    edit_clicked = st.button("✏️ Edit Workout")
+    delete_clicked = st.button("❌ Delete Workout")
 
-# === MAIN HERO HEADER ===
+# === MAIN TITLE ===
 st.title("RAGNARÖK LAB")
 
-# === STOP IF NO SHEET URL ===
+# === STOP if no URL ===
 if not sheet_url:
+    st.info("Paste your Google Sheet URL to unleash the LAB.")
     st.stop()
 
-# === SHEET LOGIC ===
+# === Connect ===
 key = sheet_url.split("/d/")[1].split("/")[0]
 sheet = gc.open_by_key(key).worksheet("WorkoutLog")
 
-# === SHOW LAST WORKOUTS ===
-all_records = sheet.get_all_records()
-prev = [row for row in all_records if row["Workout Type"] == workout_type]
-prev_sorted = sorted(prev, key=lambda x: x["Date"], reverse=True)[:3]
-
-st.subheader(f"📑 Last {len(prev_sorted)} {workout_type} Workouts")
-if prev_sorted:
-    st.dataframe(prev_sorted)
-else:
-    st.info(f"No {workout_type} workouts yet.")
-
-# === GENERATE ===
-if st.session_state.get("generated") or st.sidebar.button("⚡ Generate Workout"):
+# === === GENERATE === ===
+if gen_clicked:
     prompt = (
         f"You are an elite strength coach creating a {goal.lower()} {workout_type} workout. "
         "Use modern programming: supersets, periodization, PHUL/PHAT style. "
@@ -141,7 +127,7 @@ if st.session_state.get("generated") or st.sidebar.button("⚡ Generate Workout"
     except Exception as e:
         st.error(f"❌ GPT failed: {e}")
 
-# === SHOW GENERATED + LOG ===
+# === Display new workout ===
 if "workout_data" in st.session_state:
     st.subheader(f"🆕 {workout_type} Workout for {workout_date.strftime('%Y-%m-%d')}")
     for idx, ex in enumerate(st.session_state["workout_data"]):
@@ -166,5 +152,45 @@ if "workout_data" in st.session_state:
         st.success("✅ Workout logged!")
         del st.session_state["workout_data"]
 
-# === PLACEHOLDER: Edit/Delete functionality ===
-# (To be implemented fully later — currently only buttons in sidebar)
+# === === EDIT === ===
+if edit_clicked:
+    st.subheader("✏️ Edit Workout")
+    date_to_edit = st.date_input("Select Date to Edit", value=date.today())
+    rows = [r for r in sheet.get_all_records() if r["Date"] == date_to_edit.strftime('%Y-%m-%d')]
+    if rows:
+        edited = st.data_editor(rows, num_rows="dynamic")
+        if st.button("💾 Save Edits"):
+            # Overwrite sheet:
+            all = sheet.get_all_records()
+            remaining = [r for r in all if r["Date"] != date_to_edit.strftime('%Y-%m-%d')]
+            sheet.clear()
+            if remaining:
+                sheet.append_row(list(remaining[0].keys()))
+                for row in remaining:
+                    sheet.append_row(list(row.values()))
+            if edited:
+                sheet.append_row(list(edited[0].keys()))
+                for row in edited:
+                    sheet.append_row(list(row.values()))
+            st.success("✅ Edits saved.")
+    else:
+        st.warning("No workout found for this date.")
+
+# === === DELETE === ===
+if delete_clicked:
+    st.subheader("❌ Delete Workout")
+    date_to_delete = st.date_input("Select Date to Delete", value=date.today())
+    rows = [r for r in sheet.get_all_records() if r["Date"] == date_to_delete.strftime('%Y-%m-%d')]
+    if rows:
+        st.dataframe(rows)
+        if st.button("🔥 Confirm Delete"):
+            all = sheet.get_all_records()
+            remaining = [r for r in all if r["Date"] != date_to_delete.strftime('%Y-%m-%d')]
+            sheet.clear()
+            if remaining:
+                sheet.append_row(list(remaining[0].keys()))
+                for row in remaining:
+                    sheet.append_row(list(row.values()))
+            st.success(f"🔥 Deleted workouts from {date_to_delete.strftime('%Y-%m-%d')}")
+    else:
+        st.warning("No workout found for this date.")
