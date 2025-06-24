@@ -1,5 +1,5 @@
 # ==============================
-# === RAGNARÖK LAB v2 ===
+# === RAGNARÖK LAB 🔥🔥🔥 ===
 # ==============================
 
 import streamlit as st
@@ -15,36 +15,40 @@ st.set_page_config(
     layout="wide"
 )
 
-# === CUSTOM STYLE ===
+# === FIRE EFFECT CSS ===
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=UnifrakturCook:wght@700&display=swap');
 
 .ragnarok-title {
   font-family: 'UnifrakturCook', cursive;
-  font-size: 18vw;  /* Ultra Big */
+  font-size: 12vw;
   text-align: center;
-  color: #FFF;
-  position: relative;
-  text-shadow: 4px 4px #000, 8px 8px #111, 12px 12px #222;
-  overflow: hidden;
+  color: #fff;
+  text-shadow:
+    0 0 5px #ff0000,
+    0 0 10px #ff3300,
+    0 0 20px #ff6600,
+    0 0 40px #ff9900;
+  animation: flicker 2s infinite;
 }
 
-.ragnarok-title::before {
-  content: '';
-  position: absolute;
-  top: 0; left: -75%;
-  width: 50%;
-  height: 100%;
-  background: linear-gradient(120deg, transparent, rgba(255,255,255,0.6), transparent);
-  transform: skewX(-20deg);
-  animation: shimmer 3s infinite;
-}
-
-@keyframes shimmer {
-  0% { left: -75%; }
-  50% { left: 125%; }
-  100% { left: 125%; }
+@keyframes flicker {
+  0% { opacity: 1; text-shadow:
+    0 0 5px #ff0000,
+    0 0 10px #ff3300,
+    0 0 20px #ff6600,
+    0 0 40px #ff9900; }
+  50% { opacity: 0.85; text-shadow:
+    0 0 10px #ff3300,
+    0 0 20px #ff6600,
+    0 0 30px #ff9900,
+    0 0 50px #ffcc00; }
+  100% { opacity: 1; text-shadow:
+    0 0 5px #ff0000,
+    0 0 10px #ff3300,
+    0 0 20px #ff6600,
+    0 0 40px #ff9900; }
 }
 
 body {
@@ -94,7 +98,7 @@ with st.sidebar:
     edit_btn = st.button("✏️ Edit Previous Workout")
     delete_btn = st.button("❌ Delete Workout")
 
-# === TITLE ===
+# === HERO TITLE ===
 st.markdown("<h1 class='ragnarok-title'>RAGNARÖK LAB</h1>", unsafe_allow_html=True)
 
 # === STOP IF NO SHEET ===
