@@ -1,5 +1,5 @@
 # ==============================
-# === RAGNARÖK LAB — Final ICE 🔥 ===
+# === RAGNARÖK LAB — Final Build
 # ==============================
 
 import streamlit as st
@@ -9,12 +9,9 @@ from google.oauth2.service_account import Credentials
 from utils import generate_workout, log_workout, get_workouts_by_date, overwrite_sheet_with_rows
 
 # === CONFIG ===
-st.set_page_config(
-    page_title="RAGNARÖK LAB",
-    layout="wide"
-)
+st.set_page_config(page_title="RAGNARÖK LAB", layout="wide")
 
-# === NORDIC FLAME STYLE ===
+# === STYLE ===
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=UnifrakturCook:wght@700&family=IM+Fell+English+SC&display=swap');
@@ -29,25 +26,13 @@ body, h1, h2, h3, h4, h5, h6, p, label, div, span {
   font-size: 9vw;
   text-align: center;
   color: #e0f7ff;
-  text-shadow:
-    0 0 5px #ff0000,
-    0 0 10px #ff3300,
-    0 0 20px #ff6600,
-    0 0 40px #ff9900;
+  text-shadow: 0 0 5px #ff0000, 0 0 10px #ff3300, 0 0 20px #ff6600, 0 0 40px #ff9900;
   animation: flameglow 2.5s infinite alternate;
 }
 
 @keyframes flameglow {
-  from { text-shadow:
-    0 0 5px #ff0000,
-    0 0 10px #ff3300,
-    0 0 20px #ff6600,
-    0 0 40px #ff9900; }
-  to { text-shadow:
-    0 0 10px #ff3300,
-    0 0 20px #ff6600,
-    0 0 40px #ff9900,
-    0 0 60px #ffcc00; }
+  from { text-shadow: 0 0 5px #ff0000, 0 0 10px #ff3300, 0 0 20px #ff6600, 0 0 40px #ff9900; }
+  to { text-shadow: 0 0 10px #ff3300, 0 0 20px #ff6600, 0 0 40px #ff9900, 0 0 60px #ffcc00; }
 }
 
 .stButton>button {
@@ -71,13 +56,6 @@ input, select, textarea, input[type="date"] {
 [data-testid="stSidebar"] * {
     font-size: 16px !important;
     color: #e0f7ff !important;
-}
-
-[data-testid="stSidebar"] h1,
-[data-testid="stSidebar"] h2,
-[data-testid="stSidebar"] h3 {
-    font-size: 18px !important;
-    font-weight: bold;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -106,29 +84,29 @@ st.markdown("<h1 class='ragnarok-title'>RAGNARÖK LAB</h1>", unsafe_allow_html=T
 if not sheet_url:
     st.stop()
 
-# === SHEET ===
 key = sheet_url.split("/d/")[1].split("/")[0]
-sheet = gc.open_by_key(key).worksheet("WorkoutLog")
+log_sheet = gc.open_by_key(key).worksheet("WorkoutLog")
 
 # === GENERATE ===
 if gen_btn:
     workout = generate_workout(key, workout_type, goal)
-    st.session_state["workout_data"] = [
-        {
-            "Workout ID": f"{workout_date.strftime('%Y%m%d')}-{workout_type}",
-            "Date": workout_date.strftime('%Y-%m-%d'),
-            "Workout Type": workout_type,
-            "Exercise": ex["name"],
-            "Primary Muscle": ex["primary_muscle"],
-            "Target Muscle Detail": ex["target_muscle_detail"],
-            "Sets": ex["sets"],
-            "Reps": ex["reps"],
-            "Weight": ex["weight"],
-            "Superset Group ID": ex["superset_group_id"],
-            "Notes": ""
-        }
-        for ex in workout
-    ]
+    if workout:
+        st.session_state["workout_data"] = [
+            {
+                "Workout ID": f"{workout_date.strftime('%Y%m%d')}-{workout_type}",
+                "Date": workout_date.strftime('%Y-%m-%d'),
+                "Workout Type": workout_type,
+                "Exercise": ex["name"],
+                "Primary Muscle": ex["primary_muscle"],
+                "Target Muscle Detail": ex["target_muscle_detail"],
+                "Sets": ex["sets"],
+                "Reps": ex["reps"],
+                "Weight": ex["weight"],
+                "Superset Group ID": ex["superset_group_id"],
+                "Notes": ""
+            }
+            for ex in workout
+        ]
 
 # === SHOW GENERATED ===
 if "workout_data" in st.session_state:
@@ -145,29 +123,30 @@ if "workout_data" in st.session_state:
         )
 
     if st.button("✅ Log Workout"):
-        log_workout(sheet, st.session_state["workout_data"])
+        log_workout(log_sheet, st.session_state["workout_data"])
         st.success("✅ Workout logged!")
         del st.session_state["workout_data"]
 
-# === EDIT / DELETE ===
+# === EDIT ===
 if edit_btn:
     st.subheader("✏️ Edit Workout")
     edit_date = st.date_input("Select Date to Edit", key="edit_date")
     if st.button("🔍 Load to Edit"):
-        to_edit = get_workouts_by_date(sheet, edit_date.strftime('%Y-%m-%d'))
+        to_edit = get_workouts_by_date(log_sheet, edit_date.strftime('%Y-%m-%d'))
         if to_edit:
             edited = st.data_editor(to_edit, num_rows="dynamic")
             if st.button("💾 Save Edits"):
-                others = [row for row in sheet.get_all_records() if row["Date"] != edit_date.strftime('%Y-%m-%d')]
-                overwrite_sheet_with_rows(sheet, others + edited)
+                others = [row for row in log_sheet.get_all_records() if row["Date"] != edit_date.strftime('%Y-%m-%d')]
+                overwrite_sheet_with_rows(log_sheet, others + edited)
                 st.success("✅ Edits saved.")
         else:
             st.warning("No workout found for that date.")
 
+# === DELETE ===
 if delete_btn:
     st.subheader("❌ Delete Workout")
     del_date = st.date_input("Select Date to Delete", key="del_date")
     if st.button("🗑️ Confirm Delete"):
-        keep = [row for row in sheet.get_all_records() if row["Date"] != del_date.strftime('%Y-%m-%d')]
-        overwrite_sheet_with_rows(sheet, keep)
+        keep = [row for row in log_sheet.get_all_records() if row["Date"] != del_date.strftime('%Y-%m-%d')]
+        overwrite_sheet_with_rows(log_sheet, keep)
         st.success(f"✅ Deleted workout for {del_date.strftime('%Y-%m-%d')}.")
