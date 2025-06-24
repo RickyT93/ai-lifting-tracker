@@ -1,5 +1,5 @@
 # ==============================
-# === RAGNARÖK LAB — Final Stable
+# === RAGNARÖK LAB — Final
 # ==============================
 
 import streamlit as st
@@ -90,11 +90,9 @@ log_sheet = gc.open_by_key(key).worksheet("WorkoutLog")
 # === GENERATE ===
 if gen_btn:
     result = generate_workout(key, workout_type, goal)
-    workout = result.get("workout", [])
-    warmup = result.get("warmup", "")
-    finisher = result.get("finisher", "")
-
-    if workout:
+    if result and result["workout"]:
+        st.session_state["warmup"] = result["warmup"]
+        st.session_state["finisher"] = result["finisher"]
         st.session_state["workout_data"] = [
             {
                 "Workout ID": f"{workout_date.strftime('%Y%m%d')}-{workout_type}",
@@ -107,34 +105,39 @@ if gen_btn:
                 "Reps": ex["reps"],
                 "Weight": ex["weight"],
                 "Superset Group ID": ex["superset_group_id"],
-                "Notes": ""
+                "Notes": ""  # will fill dynamically below
             }
-            for ex in workout
+            for ex in result["workout"]
         ]
-        st.session_state["warmup"] = warmup
-        st.session_state["finisher"] = finisher
 
 # === SHOW GENERATED ===
 if "workout_data" in st.session_state:
     st.subheader(f"🔥 Warm-up: {st.session_state.get('warmup', '')}")
     st.subheader(f"🆕 {workout_type} Workout for {workout_date.strftime('%Y-%m-%d')}")
+
     for idx, ex in enumerate(st.session_state["workout_data"]):
         st.markdown(f"**{idx+1}. {ex['Exercise']}**")
         st.caption(f"{ex['Primary Muscle']} → {ex['Target Muscle Detail']}")
         st.text(f"{ex['Sets']} sets × {ex['Reps']}")
-        note_key = f"note_{idx}"
-        st.session_state["workout_data"][idx]["Notes"] = st.text_area(
-            f"Notes for {ex['Exercise']}",
-            value=ex["Notes"],
-            key=note_key
-        )
+
+        # Structured Note Widgets
+        rpe = st.slider(f"RPE for {ex['Exercise']}", 6, 10, 8, key=f"rpe_{idx}")
+        technique = st.selectbox(f"Technique for {ex['Exercise']}",
+                                 ["Perfect", "Minor issues", "Needs work"], key=f"tech_{idx}")
+        fatigue = st.selectbox(f"Fatigue for {ex['Exercise']}",
+                               ["Easy", "Moderate", "Hard", "Failure"], key=f"fatigue_{idx}")
+
+        combined_note = f"RPE: {rpe} | Technique: {technique} | Fatigue: {fatigue}"
+        st.session_state["workout_data"][idx]["Notes"] = combined_note
 
     st.subheader(f"💥 Finisher: {st.session_state.get('finisher', '')}")
 
     if st.button("✅ Log Workout"):
         log_workout(log_sheet, st.session_state["workout_data"])
         st.success("✅ Workout logged!")
-        # CLEAR
+
+    # NEW: Manual Clear Button (safe)
+    if st.button("♻️ Clear Workout & Reset"):
         for k in ["workout_data", "warmup", "finisher"]:
             if k in st.session_state:
                 del st.session_state[k]
