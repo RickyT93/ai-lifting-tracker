@@ -1,5 +1,5 @@
 # ==============================
-# === RAGNARÖK LAB: Nordic Fury ===
+# === RAGNARÖK LAB ===
 # ==============================
 
 import streamlit as st
@@ -15,41 +15,49 @@ st.set_page_config(
     layout="wide"
 )
 
-# === CUSTOM STYLES ===
+# === CUSTOM STYLE ===
 st.markdown(f"""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=UnifrakturCook:wght@700&display=swap');
 
 body {{
-    background: linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.85)),
-                url('https://raw.githubusercontent.com/RickyT93/ai-lifting-tracker/main/7C93A40A-05AE-426D-BF6F-DE44C035CE06.png');
-    background-size: cover;
-    background-attachment: fixed;
-    color: #EEE;
+  background: linear-gradient(rgba(0,0,0,0.88), rgba(0,0,0,0.88)),
+              url('https://raw.githubusercontent.com/RickyT93/ai-lifting-tracker/main/A41FF6F0-219D-4EB8-AAFD-F4755DEF68BF.jpeg');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
 }}
 
 h1 {{
-    font-family: 'Cinzel', serif;
-    font-size: 6em;
-    color: #FFF;
-    text-align: center;
-    text-shadow: 3px 3px #000;
-    margin-top: 30px;
+  font-family: 'UnifrakturCook', cursive;
+  font-size: 7em;
+  color: #FFF;
+  text-align: center;
+  text-shadow: 4px 4px #000;
+  margin-top: 80px;
+}}
+
+h2, h3, h4, h5, h6 {{
+  color: #FFF;
 }}
 
 .stButton>button {{
-    background: #000;
-    color: #FF0000;
-    border: 2px solid #FF0000;
-    border-radius: 8px;
-    font-weight: bold;
-    padding: 10px 20px;
+  background: #000;
+  color: #FF0000;
+  border: 2px solid #FF0000;
+  border-radius: 8px;
+  font-weight: bold;
+  padding: 12px 24px;
+  font-size: 1.2em;
 }}
 
 input, select, textarea {{
-    background: rgba(255,255,255,0.9);
-    color: #000 !important;
-    border-radius: 4px;
+    color: black !important;
+}}
+
+[data-testid="stSidebar"] {{
+    background-color: #111;
 }}
 </style>
 """, unsafe_allow_html=True)
@@ -68,138 +76,95 @@ with st.sidebar:
     goal = st.radio("🎯 Goal", ["Hypertrophy", "Strength", "Endurance"])
     workout_date = st.date_input("📅 Workout Date", value=date.today())
 
-    if st.button("⚡ Generate Workout"):
-        st.session_state.generated = True
+    st.button("⚡ Generate Workout")
+    st.button("✏️ Edit Previous Workouts")
+    st.button("❌ Delete Workout")
 
-    st.markdown("---")
-    if st.button("✏️ Edit Previous"):
-        st.session_state.edit_mode = True
-
-    if st.button("🗑️ Delete Workout"):
-        st.session_state.delete_mode = True
-
-# === MAIN TITLE ===
+# === MAIN HERO HEADER ===
 st.title("RAGNARÖK LAB")
 
-if sheet_url:
-    key = sheet_url.split("/d/")[1].split("/")[0]
-    sheet = gc.open_by_key(key).worksheet("WorkoutLog")
+# === STOP IF NO SHEET URL ===
+if not sheet_url:
+    st.stop()
 
-    all_records = sheet.get_all_records()
-    prev = [r for r in all_records if r["Workout Type"] == workout_type]
-    prev_sorted = sorted(prev, key=lambda x: x["Date"], reverse=True)[:3]
+# === SHEET LOGIC ===
+key = sheet_url.split("/d/")[1].split("/")[0]
+sheet = gc.open_by_key(key).worksheet("WorkoutLog")
 
-    st.subheader(f"⚔️ Last {len(prev_sorted)} {workout_type} Workouts")
-    if prev_sorted:
-        st.dataframe(prev_sorted)
-    else:
-        st.info("No history yet. Forge your legend now.")
+# === SHOW LAST WORKOUTS ===
+all_records = sheet.get_all_records()
+prev = [row for row in all_records if row["Workout Type"] == workout_type]
+prev_sorted = sorted(prev, key=lambda x: x["Date"], reverse=True)[:3]
 
-    # === GENERATE ===
-    if "generated" in st.session_state:
-        prompt = (
-            f"You are a savage Nordic strength coach forging a {goal.lower()} {workout_type} day. "
-            "Use advanced training, RPE, supersets if needed, inspired by PHUL/PHAT. "
-            "Return ONLY a JSON array of 5 exercises: name, primary_muscle, target_muscle_detail, "
-            "equipment, sets (int), reps (string), weight ('Auto'), superset_group_id (int)."
-        )
-        try:
-            response = client.chat.completions.create(
-                model="gpt-4o",
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.3
-            )
-            text = response.choices[0].message.content.strip()
-            if text.startswith("```"):
-                text = "\n".join(text.split("\n")[1:-1]).strip()
-            workout = json.loads(text)
-
-            st.session_state["workout_data"] = [
-                {
-                    "Workout ID": f"{workout_date.strftime('%Y%m%d')}-{workout_type}",
-                    "Date": workout_date.strftime('%Y-%m-%d'),
-                    "Workout Type": workout_type,
-                    "Exercise": ex["name"],
-                    "Primary Muscle": ex["primary_muscle"],
-                    "Target Muscle Detail": ex["target_muscle_detail"],
-                    "Sets": ex["sets"],
-                    "Reps": ex["reps"],
-                    "Weight": ex["weight"],
-                    "Superset Group ID": ex["superset_group_id"],
-                    "Notes": ""
-                }
-                for ex in workout
-            ]
-        except Exception as e:
-            st.error(f"GPT failed: {e}")
-
-    # === SHOW GENERATED + LOG ===
-    if "workout_data" in st.session_state:
-        st.subheader(f"🔥 {workout_type} Workout for {workout_date.strftime('%Y-%m-%d')}")
-        for idx, ex in enumerate(st.session_state["workout_data"]):
-            st.markdown(f"**{idx+1}. {ex['Exercise']}**")
-            st.caption(f"{ex['Primary Muscle']} → {ex['Target Muscle Detail']}")
-            st.text(f"{ex['Sets']} sets × {ex['Reps']}")
-            st.session_state["workout_data"][idx]["Notes"] = st.text_input(
-                f"Notes for {ex['Exercise']}",
-                value=ex["Notes"],
-                key=f"note_{idx}"
-            )
-        if st.button("✅ Log Workout"):
-            for row in st.session_state["workout_data"]:
-                sheet.append_row([
-                    row["Workout ID"], row["Date"], row["Workout Type"],
-                    row["Exercise"], row["Primary Muscle"], row["Target Muscle Detail"],
-                    row["Sets"], row["Reps"], row["Weight"],
-                    row["Superset Group ID"], row["Notes"]
-                ])
-            st.success("✅ Workout forged and logged!")
-            del st.session_state["workout_data"]
-
-    # === EDIT ===
-    if "edit_mode" in st.session_state:
-        st.subheader("✏️ Edit Workout")
-        dates = sorted(list({r["Date"] for r in all_records}), reverse=True)
-        selected_date = st.selectbox("Select Date", dates)
-        to_edit = [r for r in all_records if r["Date"] == selected_date]
-        edited = st.data_editor(to_edit, num_rows="dynamic")
-        if st.button("💾 Save Edits"):
-            sheet.clear()
-            headers = ["Workout ID","Date","Workout Type","Exercise","Primary Muscle",
-                       "Target Muscle Detail","Sets","Reps","Weight","Superset Group ID","Notes"]
-            sheet.append_row(headers)
-            for row in edited:
-                sheet.append_row([
-                    row["Workout ID"], row["Date"], row["Workout Type"],
-                    row["Exercise"], row["Primary Muscle"], row["Target Muscle Detail"],
-                    row["Sets"], row["Reps"], row["Weight"],
-                    row["Superset Group ID"], row["Notes"]
-                ])
-            st.success("✅ Edits saved!")
-            del st.session_state["edit_mode"]
-
-    # === DELETE ===
-    if "delete_mode" in st.session_state:
-        st.subheader("🗑️ Delete Workout")
-        dates = sorted(list({r["Date"] for r in all_records}), reverse=True)
-        selected_date = st.selectbox("Select Date to Delete", dates)
-        to_delete = [r for r in all_records if r["Date"] == selected_date]
-        st.dataframe(to_delete)
-        if st.button("🚨 Confirm Delete"):
-            remaining = [r for r in all_records if r["Date"] != selected_date]
-            sheet.clear()
-            headers = ["Workout ID","Date","Workout Type","Exercise","Primary Muscle",
-                       "Target Muscle Detail","Sets","Reps","Weight","Superset Group ID","Notes"]
-            sheet.append_row(headers)
-            for row in remaining:
-                sheet.append_row([
-                    row["Workout ID"], row["Date"], row["Workout Type"],
-                    row["Exercise"], row["Primary Muscle"], row["Target Muscle Detail"],
-                    row["Sets"], row["Reps"], row["Weight"],
-                    row["Superset Group ID"], row["Notes"]
-                ])
-            st.success(f"✅ Deleted workout for {selected_date}")
-            del st.session_state["delete_mode"]
-
+st.subheader(f"📑 Last {len(prev_sorted)} {workout_type} Workouts")
+if prev_sorted:
+    st.dataframe(prev_sorted)
 else:
-    st.info("⚠️ Paste your Google Sheet URL in the sidebar to unleash the LAB.")
+    st.info(f"No {workout_type} workouts yet.")
+
+# === GENERATE ===
+if st.session_state.get("generated") or st.sidebar.button("⚡ Generate Workout"):
+    prompt = (
+        f"You are an elite strength coach creating a {goal.lower()} {workout_type} workout. "
+        "Use modern programming: supersets, periodization, PHUL/PHAT style. "
+        "Return JSON: 5 exercises. Each: name, primary_muscle, target_muscle_detail, "
+        "equipment, sets (int), reps (string), weight ('Auto'), superset_group_id (int)."
+    )
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.4
+        )
+        text = response.choices[0].message.content.strip()
+        if text.startswith("```"):
+            text = "\n".join(text.split("\n")[1:-1]).strip()
+
+        workout = json.loads(text)
+        st.session_state["workout_data"] = [
+            {
+                "Workout ID": f"{workout_date.strftime('%Y%m%d')}-{workout_type}",
+                "Date": workout_date.strftime('%Y-%m-%d'),
+                "Workout Type": workout_type,
+                "Exercise": ex["name"],
+                "Primary Muscle": ex["primary_muscle"],
+                "Target Muscle Detail": ex["target_muscle_detail"],
+                "Sets": ex["sets"],
+                "Reps": ex["reps"],
+                "Weight": ex["weight"],
+                "Superset Group ID": ex["superset_group_id"],
+                "Notes": ""
+            }
+            for ex in workout
+        ]
+
+    except Exception as e:
+        st.error(f"❌ GPT failed: {e}")
+
+# === SHOW GENERATED + LOG ===
+if "workout_data" in st.session_state:
+    st.subheader(f"🆕 {workout_type} Workout for {workout_date.strftime('%Y-%m-%d')}")
+    for idx, ex in enumerate(st.session_state["workout_data"]):
+        st.markdown(f"**{idx+1}. {ex['Exercise']}**")
+        st.caption(f"{ex['Primary Muscle']} → {ex['Target Muscle Detail']}")
+        st.text(f"{ex['Sets']} sets × {ex['Reps']}")
+        note_key = f"note_{idx}"
+        st.session_state["workout_data"][idx]["Notes"] = st.text_input(
+            f"Notes for {ex['Exercise']}",
+            value=ex["Notes"],
+            key=note_key
+        )
+
+    if st.button("✅ Log Workout"):
+        for row in st.session_state["workout_data"]:
+            sheet.append_row([
+                row["Workout ID"], row["Date"], row["Workout Type"],
+                row["Exercise"], row["Primary Muscle"], row["Target Muscle Detail"],
+                row["Sets"], row["Reps"], row["Weight"],
+                row["Superset Group ID"], row["Notes"]
+            ])
+        st.success("✅ Workout logged!")
+        del st.session_state["workout_data"]
+
+# === PLACEHOLDER: Edit/Delete functionality ===
+# (To be implemented fully later — currently only buttons in sidebar)
