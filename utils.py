@@ -1,5 +1,5 @@
 # ============================
-# === utils.py (Elite Version)
+# === utils.py — Final Build
 # ============================
 
 import json
@@ -10,19 +10,26 @@ from openai import OpenAI
 
 # === Google Sheets Auth ===
 scope = ["https://www.googleapis.com/auth/spreadsheets"]
-creds = Credentials.from_service_account_info(st.secrets["gspread_creds"], scopes=scope)
+creds = Credentials.from_service_account_info(
+    st.secrets["gspread_creds"],
+    scopes=scope
+)
 gc = gspread.authorize(creds)
-
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 def generate_workout(sheet_key, day_type, goal):
     """
-    Generate an elite-level workout using PRs + logs.
+    Generate an elite workout using live PRs and last logs.
     """
+
     # === Get PRs ===
     pr_sheet = gc.open_by_key(sheet_key).worksheet("PR_Baseline")
     pr_records = pr_sheet.get_all_records()
-    pr_data = {row["Exercise Name"]: row["1RM"] for row in pr_records}
+    pr_data = {}
+    for row in pr_records:
+        name = row["Exercise Name"]
+        if name in ["Bench Press", "Squat", "Deadlift", "Push-ups", "Pull-ups"]:
+            pr_data[name] = row["1RM"] if name in ["Bench Press", "Squat", "Deadlift"] else row.get("1RM") or row.get("Max") or row.get("Reps")
 
     # === Get last 3 logs ===
     log_sheet = gc.open_by_key(sheet_key).worksheet("WorkoutLog")
@@ -30,7 +37,7 @@ def generate_workout(sheet_key, day_type, goal):
     last_logs = [row for row in logs if row["Workout Type"] == day_type]
     last_logs = sorted(last_logs, key=lambda x: x["Date"], reverse=True)[:3]
 
-    # === Ultimate Prompt ===
+    # === Master Prompt ===
     prompt = f"""
 You are an elite-level strength & functional fitness coach — the caliber of Arnold Schwarzenegger's secret coach and Hafthor Björnsson's strongman advisor — tasked with designing an exceptional, highly personalized workout plan for today.
 
@@ -47,11 +54,11 @@ Constraints & context:
 {json.dumps(last_logs)}
 
 Rules:
-1️⃣ The workout must be elite-level, functional, strongman-capable.
-2️⃣ Use advanced programming: RPE, %PRs, periodization, supersets, cluster sets, auto-regulation.
-3️⃣ Include a warm-up tailored to today’s lifts.
-4️⃣ Include a finisher for failure + conditioning.
-5️⃣ Be creative: free weights, cables, machines, sleds, strongman implements — no limits.
+1️⃣ The workout must be elite-level, functional, and strongman-capable.
+2️⃣ Use advanced programming principles: RPE, % of PRs, periodization, supersets, cluster sets, auto-regulation.
+3️⃣ Include a warm-up recommendation tailored to today’s main lifts.
+4️⃣ Include a finisher recommendation to push beyond failure or add functional conditioning.
+5️⃣ Be highly creative: use free weights, bodyweight, cables, machines, sleds, strongman tools — no limits.
 6️⃣ Each exercise must include:
    - name
    - primary_muscle
@@ -60,14 +67,14 @@ Rules:
    - sets (int)
    - reps (string, e.g. "5-8 @ RPE 8")
    - weight (string, % of PR if relevant)
-   - superset_group_id (0 = none)
-7️⃣ Must have at least 1 superset or finisher circuit.
-8️⃣ Ensure progression vs. last logs.
-9️⃣ Be creative — no boring repeats.
-🔟 Return ONLY valid JSON — no explanations, no text.
+   - superset_group_id (0 means none)
+7️⃣ Include at least one superset or finisher circuit.
+8️⃣ Ensure intelligent progression vs. last logs — evolve volume, intensity, or variation.
+9️⃣ Be creative — avoid basic repeats.
+🔟 Return ONLY valid JSON — no explanations, no text, no code block.
 
 Mission:
-Deliver a workout so savage it could forge a Norse god — safe, progressive, worthy of RAGNARÖK LAB.
+Deliver a workout so powerful it could forge a Norse god — safe, savage, progressive, and worthy of RAGNARÖK LAB.
 """
 
     try:
@@ -90,9 +97,6 @@ Deliver a workout so savage it could forge a Norse god — safe, progressive, wo
         return []
 
 def log_workout(sheet, workout_data):
-    """
-    Append rows to WorkoutLog.
-    """
     for row in workout_data:
         sheet.append_row([
             row["Workout ID"], row["Date"], row["Workout Type"],
