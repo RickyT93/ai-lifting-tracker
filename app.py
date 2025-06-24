@@ -22,11 +22,11 @@ st.markdown("""
 body, h1, h2, h3, h4, h5, h6, p, label, div, span {
   font-family: 'UnifrakturCook', cursive;
   color: #FFEEEE !important;
-  font-size: 1.2em !important;
+  font-size: 1.2em !important;  /* baseline */
 }
 
 .ragnarok-title {
-  font-size: 10vw;
+  font-size: 7.5vw;  /* 🔥 Reduced ~25% from 10vw */
   text-align: center;
   color: #FF3300;
   text-shadow:
@@ -51,7 +51,7 @@ body, h1, h2, h3, h4, h5, h6, p, label, div, span {
 }
 
 [data-testid="stSidebar"] * {
-  font-size: 0.8em !important;  /* 🔥 Smaller sidebar text only */
+  font-size: 1.45em !important;  /* 🔥 Increase sidebar text by ~45% */
 }
 
 .stButton>button {
