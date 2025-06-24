@@ -1,5 +1,5 @@
 # ============================
-# === utils.py (Elite Version)
+# === utils.py (Final Polished)
 # ============================
 
 import json
@@ -17,21 +17,21 @@ client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 def generate_workout(sheet_key, day_type, goal):
     """
-    Generate an elite workout with warmup & finisher, robust structure.
+    Generate an elite workout with warmup & finisher.
     """
 
-    # === Get PRs ===
+    # === Pull PRs ===
     pr_sheet = gc.open_by_key(sheet_key).worksheet("PR_Baseline")
     pr_records = pr_sheet.get_all_records()
     pr_data = {row["Exercise Name"]: row["1RM"] for row in pr_records}
 
-    # === Get last 3 logs ===
+    # === Pull last 3 logs ===
     log_sheet = gc.open_by_key(sheet_key).worksheet("WorkoutLog")
     logs = log_sheet.get_all_records()
     last_logs = [row for row in logs if row["Workout Type"] == day_type]
     last_logs = sorted(last_logs, key=lambda x: x["Date"], reverse=True)[:3]
 
-    # === Elite Prompt ===
+    # === Prompt ===
     prompt = f"""
 You are an elite-level strength & functional fitness coach — the caliber of Arnold Schwarzenegger's secret coach and Hafthor Björnsson's strongman advisor.
 
@@ -72,7 +72,12 @@ Deliver a workout so powerful it could forge a Norse god — safe, savage, and w
             text = "\n".join(text.split("\n")[1:-1]).strip()
 
         result = json.loads(text)
-        return result  # { "warmup": "...", "workout": [...], "finisher": "..." }
+        # Return exactly what app.py expects
+        return {
+            "warmup": result.get("warmup", ""),
+            "workout": result.get("workout", []),
+            "finisher": result.get("finisher", "")
+        }
 
     except Exception as e:
         st.error(f"⚠️ OpenAI error: {e}")
