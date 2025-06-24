@@ -50,6 +50,10 @@ body, h1, h2, h3, h4, h5, h6, p, label, div, span {
     0 0 100px #FF0000; }
 }
 
+[data-testid="stSidebar"] * {
+  font-size: 0.8em !important;  /* 🔥 Smaller sidebar text only */
+}
+
 .stButton>button {
   background: #000;
   color: #FF3300;
