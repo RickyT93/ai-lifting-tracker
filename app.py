@@ -18,10 +18,10 @@ with open("theme.css") as f:
 
 # === FULLSCREEN FADE-IN + LOOPING VIDEO BACKGROUND ===
 st.markdown("""
-<div id="scif-intro">
-    <img src="https://raw.githubusercontent.com/RickyT93/ai-lifting-tracker/main/assets/u2295657366_httpss.mj.runmyLNo0MvKLQ_A_single_industrial_meta_c2051300-e6d7-4b2a-b8f5-de5b7b1752cc_3.png" alt="SCIF Intro">
-</div>
+<!-- Intro image as full background -->
+<div id="scif-intro"></div>
 
+<!-- Looping .mp4 video background -->
 <video autoplay loop muted id="scif-loop-bg">
     <source src="https://raw.githubusercontent.com/RickyT93/ai-lifting-tracker/main/assets/scif_loop.gif.mp4" type="video/mp4">
 </video>
