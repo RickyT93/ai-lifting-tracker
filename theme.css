@@ -64,24 +64,41 @@ hr {
 }
 
 /* === ANIMATION KEYFRAMES === */
-@keyframes fadeIn {
-    0% { opacity: 0; transform: translateY(-20px); }
-    100% { opacity: 1; transform: translateY(0); }
+@keyframes fadeOut {
+    to {
+        opacity: 0;
+        visibility: hidden;
+    }
 }
 
-/* === FULL WIDTH BANNER IMAGE === */
-.banner-only {
-    width: 100%;
-    padding: 0;
-    margin: 0;
+@keyframes glowPulse {
+    0%, 100% {
+        filter: drop-shadow(0 0 6px #ff0000aa);
+    }
+    50% {
+        filter: drop-shadow(0 0 2px #ff0000aa);
+    }
 }
 
-.banner-img {
-    width: 100%;
-    max-height: 320px;
+/* === SCIF FULLSCREEN IMAGE INTRO === */
+#scif-intro {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: #0a0a0a;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeOut 2s ease-out 5s forwards;
+    transition: all 1s ease-out;
+}
+
+#scif-intro img {
+    max-width: 100%;
+    max-height: 100vh;
     object-fit: cover;
-    display: block;
-    margin: 0 auto 1rem auto;
-    border-bottom: 1px solid #1C1C1C;
-    animation: fadeIn 1.5s ease-in-out;
+    animation: glowPulse 3s ease-in-out infinite;
+    box-shadow: 0 0 40px rgba(255, 0, 0, 0.2);
 }
