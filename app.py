@@ -16,11 +16,9 @@ st.set_page_config(page_title="S.C.I.F.", layout="wide")
 with open("theme.css") as f:
     st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-# === BANNER ===
+# === FULLSCREEN FADE-IN/FULLSCREEN BACKGROUND ===
 st.markdown("""
-<div id="scif-intro">
-    <img src="https://raw.githubusercontent.com/RickyT93/ai-lifting-tracker/main/assets/u2295657366_httpss.mj.runmyLNo0MvKLQ_A_single_industrial_meta_c2051300-e6d7-4b2a-b8f5-de5b7b1752cc_3.png" alt="SCIF">
-</div>
+<div id="scif-intro"></div>
 """, unsafe_allow_html=True)
 
 # === AUTH ===
