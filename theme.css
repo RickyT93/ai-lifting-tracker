@@ -81,3 +81,21 @@ input, textarea, select {
         visibility: hidden;
     }
 }
+#scif-video-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    min-width: 100vw;
+    min-height: 100vh;
+    z-index: -1;
+    object-fit: cover;
+    opacity: 0;
+    animation: fadeInLoop 2s ease-out 5.5s forwards;
+    pointer-events: none;
+}
+
+/* Fade-in animation for looping video */
+@keyframes fadeInLoop {
+    from { opacity: 0; }
+    to   { opacity: 0.12; } /* subtle night-vision vibe */
+}
