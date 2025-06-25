@@ -1,92 +1,92 @@
-/* S.C.I.F. – Tactical Intelligence Fitness UI */
+/* S.C.I.F. – Elite Tactical Fitness UI */
 
+/* Base background and typography */
 body {
     background-color: #0B0C0E;
-    color: #E6E6E6;
-    font-family: 'Inter', 'Segoe UI', sans-serif;
+    color: #E0E0E0;
+    font-family: 'Segoe UI', 'Inter', sans-serif;
     font-size: 16px;
 }
 
 h1, h2, h3 {
-    font-family: 'Inter', sans-serif;
-    font-weight: 700;
     color: #F2F2F2;
-    letter-spacing: 0.5px;
+    font-weight: 700;
     text-transform: uppercase;
-    border-left: 4px solid #1DB954;
+    letter-spacing: 0.5px;
+    border-left: 4px solid #666;
     padding-left: 10px;
+    margin-bottom: 10px;
 }
 
 h4, h5, h6 {
-    font-family: 'Inter', sans-serif;
     color: #CCCCCC;
+    font-weight: 600;
 }
 
-.st-emotion-cache-1avcm0n {
-    font-family: 'Consolas', monospace !important;
-    color: #1DB954 !important;
+/* Remove icons/emojis — override Streamlit default styles */
+section[data-testid="stSidebar"] .css-1offfwp,
+section[data-testid="stToolbar"] svg,
+section[data-testid="stSidebar"] img {
+    display: none !important;
 }
 
-/* Workout Section Container */
-.exercise-box {
+/* Input, text, select fields */
+input, textarea, select {
     background-color: #121212;
-    border: 1px solid #2A2A2A;
-    padding: 16px;
-    border-radius: 6px;
-    margin-bottom: 24px;
-    box-shadow: 0 0 8px rgba(29, 185, 84, 0.1);
-}
-
-/* Input Fields */
-input, select, textarea {
-    background-color: #101010;
     border: 1px solid #333;
     color: #FFFFFF;
     padding: 10px;
     border-radius: 4px;
-    font-family: 'Inter', sans-serif;
 }
 
 input:focus, textarea:focus, select:focus {
-    border-color: #1DB954;
+    border-color: #999;
     outline: none;
+}
+
+/* Buttons */
+.stButton > button {
+    background-color: #444;
+    color: #F2F2F2;
+    font-weight: 600;
+    padding: 8px 16px;
+    border-radius: 4px;
+    border: 1px solid #666;
+    transition: 0.2s ease-in-out;
+}
+
+.stButton > button:hover {
+    background-color: #666;
 }
 
 /* Sliders */
 .stSlider > div[data-baseweb="slider"] {
-    color: #1DB954 !important;
+    background-color: transparent;
+    color: #F2F2F2 !important;
 }
 
-/* Buttons */
-button, .stButton > button {
-    background-color: #1DB954;
-    color: #0B0C0E;
-    font-weight: 600;
-    padding: 10px 18px;
-    border-radius: 4px;
-    border: none;
-}
-
-button:hover, .stButton > button:hover {
-    background-color: #1AA34A;
+/* Sidebar styling */
+section[data-testid="stSidebar"] {
+    background-color: #101010;
+    color: #FFFFFF;
+    border-right: 1px solid #222;
 }
 
 /* Tables */
 table {
-    border-collapse: collapse;
     width: 100%;
+    border-collapse: collapse;
 }
 
 th, td {
-    text-align: left;
     padding: 10px;
     border-bottom: 1px solid #333;
-    color: #EAEAEA;
+    text-align: left;
+    color: #DDDDDD;
 }
 
 th {
     background-color: #1A1A1A;
-    font-weight: 600;
 }
 
 /* Scrollbars */
@@ -97,16 +97,16 @@ th {
     background: #0B0C0E;
 }
 ::-webkit-scrollbar-thumb {
-    background: #1DB954;
+    background: #555;
 }
 ::-webkit-scrollbar-thumb:hover {
-    background: #25d366;
+    background: #777;
 }
 
-/* Section Dividers */
+/* Section breaks */
 hr {
     border: none;
     height: 1px;
-    background: #333;
-    margin: 40px 0;
+    background: #444;
+    margin: 30px 0;
 }
