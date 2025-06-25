@@ -1,73 +1,75 @@
-/* theme.css — SCIF Tactical Theme */
+/* === SCIF Tactical Theme === */
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&display=swap');
+
 html, body, [class*="css"] {
     font-family: 'Roboto Condensed', 'OCR A Std', monospace;
-    background-color: #101418;
+    background-color: #0F1318;
     color: #D0D0D0;
 }
 
+/* Headings */
 h1, h2, h3, h4 {
     font-family: 'OCR A Std', monospace;
-    color: #F0F0F0;
+    color: #F4F4F4;
+    margin-bottom: 0.5rem;
 }
 
-h1 {
-    font-size: 2.2rem;
-}
+h1 { font-size: 2.2rem; }
+h2 { font-size: 1.8rem; }
+h3 { font-size: 1.4rem; }
+h4 { font-size: 1.2rem; }
 
-h2 {
-    font-size: 1.8rem;
-}
-
-h3 {
-    font-size: 1.4rem;
-}
-
-h4 {
-    font-size: 1.2rem;
-}
-
+/* Inputs */
 input, textarea, select {
     background-color: #1A1E23 !important;
     color: #D0D0D0 !important;
     border: 1px solid #333 !important;
     border-radius: 4px;
+    font-family: 'Roboto Condensed', sans-serif;
 }
 
+/* Buttons */
 .stButton>button {
-    background-color: #222 !important;
-    color: #DDD !important;
+    background-color: #1B1F24 !important;
+    color: #DDDDDD !important;
     border: 1px solid #444;
-    padding: 0.5rem 1rem;
-    margin-top: 0.5rem;
+    padding: 0.5rem 1.25rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
 }
 
 .stButton>button:hover {
-    background-color: #444 !important;
-    color: #FFF !important;
+    background-color: #2A2F36 !important;
+    color: #FFFFFF !important;
     border-color: #666;
 }
 
+/* Sidebar */
 [data-testid="stSidebar"] {
     background-color: #0D1116;
-    padding: 1rem;
+    padding: 1.25rem;
     border-right: 1px solid #1E2228;
 }
 
 [data-testid="stSidebar"] h1,
 [data-testid="stSidebar"] h2,
 [data-testid="stSidebar"] h3 {
-    color: #FFFFFF;
+    color: #F0F0F0;
 }
 
+/* Slider */
+.stSlider {
+    background-color: #181C22;
+}
+
+/* Main content container */
+.block-container {
+    padding: 2rem 3rem 3rem;
+}
+
+/* Divider */
 hr {
     border-top: 1px solid #2F2F2F;
-    margin: 1rem 0;
-}
-
-.stSlider {
-    background-color: #111;
-}
-
-.block-container {
-    padding: 2rem 2rem 4rem;
+    margin: 1.5rem 0;
 }
