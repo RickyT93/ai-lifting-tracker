@@ -18,9 +18,8 @@ with open("theme.css") as f:
 
 # === BANNER ===
 st.markdown("""
-<div class="scif-banner">
-    <div class="scif-title">S.C.I.F.</div>
-    <div class="scif-subtitle">Strategic Conditioning Intelligence Fitness</div>
+<div style="text-align: center;">
+    <img src="assets/u2295657366_httpss.mj.runmyLNo0MvKLQ_A_single_industrial_meta_c2051300-e6d7-4b2a-b8f5-de5b7b1752cc_3.png" class="scif-image-banner">
 </div>
 """, unsafe_allow_html=True)
 
