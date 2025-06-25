@@ -5,17 +5,15 @@ html, body, [class*="css"] {
     font-family: 'Roboto Condensed', 'OCR A Std', monospace;
     background-color: #101418;
     color: #D0D0D0;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
 }
 
 h1, h2, h3, h4 {
     font-family: 'OCR A Std', monospace;
     color: #F0F0F0;
 }
-
-h1 { font-size: 2.2rem; }
-h2 { font-size: 1.8rem; }
-h3 { font-size: 1.4rem; }
-h4 { font-size: 1.2rem; }
 
 input, textarea, select {
     background-color: #1A1E23 !important;
@@ -50,55 +48,36 @@ input, textarea, select {
     color: #FFFFFF;
 }
 
-hr {
-    border-top: 1px solid #2F2F2F;
-    margin: 1rem 0;
-}
-
-.stSlider {
-    background-color: #111;
-}
-
-.block-container {
-    padding: 2rem 2rem 4rem;
-}
-
-/* === ANIMATION KEYFRAMES === */
-@keyframes fadeOut {
-    to {
-        opacity: 0;
-        visibility: hidden;
-    }
-}
-
-@keyframes glowPulse {
-    0%, 100% {
-        filter: drop-shadow(0 0 6px #ff0000aa);
-    }
-    50% {
-        filter: drop-shadow(0 0 2px #ff0000aa);
-    }
-}
-
-/* === SCIF FULLSCREEN IMAGE INTRO === */
+/* === SCIF INTRO FULLSCREEN BACKGROUND === */
 #scif-intro {
     position: fixed;
     top: 0; left: 0;
     width: 100vw;
     height: 100vh;
-    background-color: #0a0a0a;
     z-index: 9999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    animation: fadeOut 2s ease-out 5s forwards;
-    transition: all 1s ease-out;
+    background-image: url("https://raw.githubusercontent.com/RickyT93/ai-lifting-tracker/main/assets/u2295657366_httpss.mj.runmyLNo0MvKLQ_A_single_industrial_meta_c2051300-e6d7-4b2a-b8f5-de5b7b1752cc_3.png");
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+    animation: fadeOutSlow 4s ease-in-out 5s forwards, fadeInSlow 2.5s ease-in;
 }
 
-#scif-intro img {
-    max-width: 100%;
-    max-height: 100vh;
-    object-fit: cover;
-    animation: glowPulse 3s ease-in-out infinite;
-    box-shadow: 0 0 40px rgba(255, 0, 0, 0.2);
+/* === ANIMATIONS === */
+@keyframes fadeInSlow {
+    0% {
+        opacity: 0;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+
+@keyframes fadeOutSlow {
+    0% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+        visibility: hidden;
+    }
 }
