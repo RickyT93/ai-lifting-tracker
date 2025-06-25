@@ -21,16 +21,15 @@ gc = gspread.authorize(creds)
 
 # === SIDEBAR ===
 with st.sidebar:
-    st.header("🔧 Controls")
-    sheet_url = st.text_input("📄 Google Sheet URL")
-    workout_type = st.selectbox("📂 Workout Type", ["Push", "Pull", "Legs"])
-    goal = st.radio("🎯 Goal", ["Hypertrophy", "Strength", "Endurance"])
-    workout_date = st.date_input("📅 Workout Date", value=date.today())
-    theme_toggle = st.checkbox("🌓 Light/Dark Theme")
+    sheet_url = st.text_input("Google Sheet URL")
+    workout_type = st.selectbox("Workout Type", ["Push", "Pull", "Legs"])
+    goal = st.radio("Goal", ["Hypertrophy", "Strength", "Endurance"])
+    workout_date = st.date_input("Workout Date", value=date.today())
+    theme_toggle = st.checkbox("Light/Dark Theme")
 
-    gen_btn = st.button("🚀 Generate Workout")
-    edit_btn = st.button("✏️ Edit Previous Workout")
-    delete_btn = st.button("🗑️ Delete Workout")
+    gen_btn = st.button("Generate Workout")
+    edit_btn = st.button("Edit Previous Workout")
+    delete_btn = st.button("Delete Workout")
 
 # === STOP IF NO SHEET ===
 if not sheet_url:
