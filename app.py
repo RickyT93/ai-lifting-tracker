@@ -18,8 +18,9 @@ with open("theme.css") as f:
 
 # === BANNER ===
 st.markdown("""
-<div style="text-align: center;">
-    <img src="assets/u2295657366_httpss.mj.runmyLNo0MvKLQ_A_single_industrial_meta_c2051300-e6d7-4b2a-b8f5-de5b7b1752cc_3.png" class="scif-image-banner">
+<div class="banner-only">
+    <img src="https://raw.githubusercontent.com/RickyT93/ai-lifting-tracker/main/assets/u2295657366_httpss.mj.runmyLNo0MvKLQ_A_single_industrial_meta_c2051300-e6d7-4b2a-b8f5-de5b7b1752cc_3.png"
+         class="banner-img">
 </div>
 """, unsafe_allow_html=True)
 
