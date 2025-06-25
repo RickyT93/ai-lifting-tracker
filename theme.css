@@ -68,30 +68,24 @@ hr {
     z-index: 2;
 }
 
-/* === INTRO IMAGE ANIMATION === */
+/* === FADE-OUT KEYFRAMES === */
 @keyframes fadeOut {
     0%   { opacity: 1; }
     80%  { opacity: 1; }
     100% { opacity: 0; display: none; }
 }
 
+/* === INTRO STATIC FULLSCREEN IMAGE === */
 #scif-intro {
     position: fixed;
     top: 0;
     left: 0;
     width: 100vw;
     height: 100vh;
+    background: url("https://raw.githubusercontent.com/RickyT93/ai-lifting-tracker/main/assets/u2295657366_httpss.mj.runmyLNo0MvKLQ_A_single_industrial_meta_c2051300-e6d7-4b2a-b8f5-de5b7b1752cc_3.png") no-repeat center center;
+    background-size: cover;
     z-index: 3;
-    background-color: black;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     animation: fadeOut 6s ease-in-out forwards;
-}
-#scif-intro img {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: cover;
 }
 
 /* === LOOPING VIDEO BACKGROUND === */
@@ -99,9 +93,15 @@ hr {
     position: fixed;
     top: 0;
     left: 0;
-    min-width: 100%;
-    min-height: 100%;
+    min-width: 100vw;
+    min-height: 100vh;
     object-fit: cover;
     z-index: 0;
     opacity: 0.25;
+}
+
+/* === STREAMLIT CONTENT OVERRIDE === */
+.stApp {
+    background: transparent !important;
+    z-index: 1;
 }
