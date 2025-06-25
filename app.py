@@ -11,8 +11,18 @@ from db import init_db, log_to_db
 
 # === CONFIG ===
 st.set_page_config(page_title="S.C.I.F.", layout="wide")
+
+# === LOAD CUSTOM THEME ===
 with open("theme.css") as f:
     st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
+# === BANNER ===
+st.markdown("""
+<div class="scif-banner">
+    <div class="scif-title">S.C.I.F.</div>
+    <div class="scif-subtitle">Strategic Conditioning Intelligence Fitness</div>
+</div>
+""", unsafe_allow_html=True)
 
 # === AUTH ===
 scope = ["https://www.googleapis.com/auth/spreadsheets"]
