@@ -1,20 +1,26 @@
 @import url('https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&family=Orbitron:wght@700&display=swap');
 
-/* === GLOBAL OVERRIDES === */
+/* === RESET & BASE === */
 html, body, [class*="css"] {
     font-family: 'Roboto Condensed', 'OCR A Std', monospace;
-    background-color: #101418;
+    background-color: #000000;
     color: #D0D0D0;
     margin: 0;
     padding: 0;
     overflow-x: hidden;
 }
 
+/* === HEADERS === */
 h1, h2, h3, h4 {
     font-family: 'OCR A Std', monospace;
     color: #F0F0F0;
 }
+h1 { font-size: 2.2rem; }
+h2 { font-size: 1.8rem; }
+h3 { font-size: 1.4rem; }
+h4 { font-size: 1.2rem; }
 
+/* === INPUT FIELDS === */
 input, textarea, select {
     background-color: #1A1E23 !important;
     color: #D0D0D0 !important;
@@ -22,6 +28,7 @@ input, textarea, select {
     border-radius: 4px;
 }
 
+/* === BUTTONS === */
 .stButton>button {
     background-color: #222 !important;
     color: #DDD !important;
@@ -29,73 +36,72 @@ input, textarea, select {
     padding: 0.5rem 1rem;
     margin-top: 0.5rem;
 }
-
 .stButton>button:hover {
     background-color: #444 !important;
     color: #FFF !important;
     border-color: #666;
 }
 
+/* === SIDEBAR === */
 [data-testid="stSidebar"] {
     background-color: #0D1116;
     padding: 1rem;
     border-right: 1px solid #1E2228;
 }
-
 [data-testid="stSidebar"] h1,
 [data-testid="stSidebar"] h2,
 [data-testid="stSidebar"] h3 {
     color: #FFFFFF;
 }
 
-/* === SCIF INTRO FULLSCREEN BACKGROUND === */
+/* === CONTAINER === */
+hr {
+    border-top: 1px solid #2F2F2F;
+    margin: 1rem 0;
+}
+.stSlider {
+    background-color: #111;
+}
+.block-container {
+    padding: 2rem 2rem 4rem;
+    position: relative;
+    z-index: 2;
+}
+
+/* === INTRO IMAGE ANIMATION === */
+@keyframes fadeOut {
+    0%   { opacity: 1; }
+    80%  { opacity: 1; }
+    100% { opacity: 0; display: none; }
+}
+
 #scif-intro {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: 9999;
-    background-image: url("https://raw.githubusercontent.com/RickyT93/ai-lifting-tracker/main/assets/u2295657366_httpss.mj.runmyLNo0MvKLQ_A_single_industrial_meta_c2051300-e6d7-4b2a-b8f5-de5b7b1752cc_3.png");
-    background-size: cover;
-    background-position: center center;
-    background-repeat: no-repeat;
-    animation: fadeOutSlow 4s ease-in-out 5s forwards, fadeInSlow 2.5s ease-in;
-}
-
-/* === ANIMATIONS === */
-@keyframes fadeInSlow {
-    0% {
-        opacity: 0;
-    }
-    100% {
-        opacity: 1;
-    }
-}
-
-@keyframes fadeOutSlow {
-    0% {
-        opacity: 1;
-    }
-    100% {
-        opacity: 0;
-        visibility: hidden;
-    }
-}
-#scif-video-bg {
     position: fixed;
     top: 0;
     left: 0;
-    min-width: 100vw;
-    min-height: 100vh;
-    z-index: -1;
+    width: 100vw;
+    height: 100vh;
+    z-index: 3;
+    background-color: black;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeOut 6s ease-in-out forwards;
+}
+#scif-intro img {
+    max-width: 100%;
+    max-height: 100%;
     object-fit: cover;
-    opacity: 0;
-    animation: fadeInLoop 2s ease-out 5.5s forwards;
-    pointer-events: none;
 }
 
-/* Fade-in animation for looping video */
-@keyframes fadeInLoop {
-    from { opacity: 0; }
-    to   { opacity: 0.12; } /* subtle night-vision vibe */
+/* === LOOPING VIDEO BACKGROUND === */
+#scif-loop-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    min-width: 100%;
+    min-height: 100%;
+    object-fit: cover;
+    z-index: 0;
+    opacity: 0.25;
 }
