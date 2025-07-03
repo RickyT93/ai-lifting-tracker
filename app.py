@@ -5,16 +5,21 @@ from db import init_db, log_to_db, update_workout_row
 
 st.set_page_config(page_title="S.C.I.F.", layout="wide")
 
-# === VIDEO & INTRO STYLING ===
-st.markdown("""
-    <style>
-    #scif-intro { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: black; z-index: 10; animation: fadeOut 6s ease-in-out forwards; }
-    #scif-loop-bg { position: fixed; top: 0; left: 0; min-width: 100vw; min-height: 100vh; object-fit: cover; z-index: 0; opacity: 0.25; }
-    </style>
-""", unsafe_allow_html=True)
+# === LOAD CUSTOM THEME.CSS ===
+with open("theme.css") as f:
+    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
+# === STATIC INTRO IMAGE DIV ===
 st.markdown('<div id="scif-intro"></div>', unsafe_allow_html=True)
+
+# === VIDEO BACKGROUND (optional – keep if you want loop video after intro) ===
 video_url = "https://scif-assets.s3.amazonaws.com/background_loop.mp4"
-st.markdown(f'<video id="scif-loop-bg" autoplay muted loop><source src="{video_url}" type="video/mp4"></video>', unsafe_allow_html=True)
+st.markdown(f"""
+    <video id="scif-loop-bg" autoplay muted loop>
+        <source src="{video_url}" type="video/mp4">
+    </video>
+""", unsafe_allow_html=True)
+
 
 # === SESSION CLEANUP ===
 def clear_workout_session():
