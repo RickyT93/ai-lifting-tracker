@@ -43,7 +43,9 @@ else:
 if st.sidebar.button("Generate Workout"):
     clear_workout_session()
     with st.spinner("Generating..."):
-        result = generate_workout(sheet_key, day_type, goal)
+        from gspread_helper import get_gsheet_connection 
+        gc = get_gsheet_connection()
+        result = generate_workout(gc, sheet_key, day_type, goal)  # ← ✅ pass gc here!
         st.session_state["warmup"] = result.get("warmup", "")
         st.session_state["finisher"] = result.get("finisher", "")
         st.session_state["workout_data"] = [
