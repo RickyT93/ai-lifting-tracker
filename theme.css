@@ -30,15 +30,17 @@ input, textarea, select {
 
 /* === BUTTONS === */
 .stButton>button {
-    background-color: #222 !important;
-    color: #DDD !important;
+    background-color: #1F1F1F !important;
+    color: #E0E0E0 !important;
     border: 1px solid #444;
-    padding: 0.5rem 1rem;
-    margin-top: 0.5rem;
+    border-radius: 4px;
+    font-weight: 600;
+    transition: all 0.2s ease-in-out;
+    box-shadow: 0 0 4px rgba(255,255,255,0.1);
 }
 .stButton>button:hover {
-    background-color: #444 !important;
-    color: #FFF !important;
+    background-color: #333 !important;
+    color: #FFFFFF !important;
     border-color: #666;
 }
 
@@ -47,6 +49,7 @@ input, textarea, select {
     background-color: #0D1116;
     padding: 1rem;
     border-right: 1px solid #1E2228;
+    font-size: 0.95rem;
 }
 [data-testid="stSidebar"] h1,
 [data-testid="stSidebar"] h2,
@@ -59,13 +62,16 @@ hr {
     border-top: 1px solid #2F2F2F;
     margin: 1rem 0;
 }
-.stSlider {
-    background-color: #111;
-}
 .block-container {
     padding: 2rem 2rem 4rem;
     position: relative;
     z-index: 2;
+}
+
+/* === SLIDER === */
+.stSlider > div[data-baseweb="slider"] {
+    background-color: #222;
+    border-radius: 4px;
 }
 
 /* === FADE-OUT KEYFRAMES === */
@@ -83,7 +89,7 @@ hr {
     width: 100vw;
     height: 100vh;
     background: url("https://raw.githubusercontent.com/RickyT93/ai-lifting-tracker/main/assets/u2295657366_httpss.mj.runmyLNo0MvKLQ_A_single_industrial_meta_c2051300-e6d7-4b2a-b8f5-de5b7b1752cc_3.png") no-repeat center center;
-    background-position: 100% center;  /* <-- slightly to the right */
+    background-position: 100% center;
     background-size: cover;
     z-index: 3;
     animation: fadeOut 6s ease-in-out forwards;
@@ -105,4 +111,32 @@ hr {
 .stApp {
     background: transparent !important;
     z-index: 1;
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+/* === EXPANDERS === */
+.st-expanderHeader {
+    background-color: #121212 !important;
+    color: #CCCCCC !important;
+    font-weight: 600;
+    border-bottom: 1px solid #333;
+}
+
+/* === TABLES === */
+thead tr th {
+    background-color: #1E1E1E;
+    color: #F0F0F0;
+}
+tbody tr td {
+    background-color: #111;
+    color: #D0D0D0;
+}
+
+/* === TOOLTIPS (if applicable) === */
+[data-testid="stTooltip"] {
+    background-color: #222 !important;
+    color: #EEE !important;
+    border-radius: 4px;
+    border: 1px solid #444;
 }
